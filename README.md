@@ -11,8 +11,7 @@ A Python automation script for managing Dedicated Hytale Servers.
 *   **Optimization**: Detects `HytaleServer.aot` to enable Ahead-Of-Time cache for faster startup.
 
 ## Requirements
-
-*   Windows (Recommended) or Linux.
+*   **Windows or Linux** (Cross-platform support).
 *   Python 3.x
 *   Java 25 (e.g., Adoptium Eclipse Temurin)
 *   Internet connection

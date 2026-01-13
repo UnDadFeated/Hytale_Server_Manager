@@ -9,12 +9,15 @@ import zipfile
 
 import version
 
+import platform
+
 # --- Configuration ---
 JAVA_VERSION_REQ = 25
 SERVER_JAR = "HytaleServer.jar" 
 UPDATER_ZIP_URL = "https://downloader.hytale.com/hytale-downloader.zip"
 UPDATER_ZIP_FILE = "hytale-downloader.zip"
-UPDATER_EXECUTABLE = "hytale-downloader.exe" # Windows executable default
+IS_WINDOWS = platform.system() == "Windows"
+UPDATER_EXECUTABLE = "hytale-downloader.exe" if IS_WINDOWS else "hytale-downloader"
 ASSETS_FILE = "Assets.zip"
 SERVER_MEMORY = "4G" 
 AOT_FILE = "HytaleServer.aot"
@@ -70,12 +73,10 @@ def check_assets():
 def ensure_updater():
     """Checks for downloader tool, downloads if missing. Returns command to run it."""
     
-    # Check for executable first (Windows)
     if os.path.exists(UPDATER_EXECUTABLE):
         log(f"Updater executable '{UPDATER_EXECUTABLE}' found.")
-        return [UPDATER_EXECUTABLE]
+        return [f"./{UPDATER_EXECUTABLE}"] if not IS_WINDOWS else [UPDATER_EXECUTABLE]
     
-    # Check for jar
     if os.path.exists("hytale-downloader.jar"):
         log("Updater jar found.")
         return ["java", "-jar", "hytale-downloader.jar"]
@@ -95,20 +96,29 @@ def ensure_updater():
              os.remove(UPDATER_ZIP_FILE)
              
         if os.path.exists(UPDATER_EXECUTABLE):
+            # On Linux, make it executable
+            if not IS_WINDOWS:
+                os.chmod(UPDATER_EXECUTABLE, 0o755)
+                log("Made updater executable.")
+                return [f"./{UPDATER_EXECUTABLE}"]
             return [UPDATER_EXECUTABLE]
+            
         elif os.path.exists("hytale-downloader.jar"):
             return ["java", "-jar", "hytale-downloader.jar"]
         else:
             log(f"WARNING: No recognized updater file found after extraction.")
-            # Verify contents
             files = os.listdir('.')
             log(f"Files: {files}")
             # Try to guess
             for f in files:
-                if "hytale-downloader" in f and (f.endswith(".exe") or f.endswith(".jar")):
-                     if f.endswith(".jar"):
+                if "hytale-downloader" in f:
+                    if f.endswith(".jar"):
                          return ["java", "-jar", f]
-                     return [f]
+                    if IS_WINDOWS and f.endswith(".exe"):
+                        return [f]
+                    if not IS_WINDOWS and "." not in f: # binary usually has no extension on linux
+                        os.chmod(f, 0o755)
+                        return [f"./{f}"]
             return None
 
     except Exception as e:
@@ -119,28 +129,49 @@ def stop_server():
     """Checks for running Hytale server process and stops it."""
     log("Checking for running Hytale server...")
     
-    try:
-        cmd = 'wmic process where "name=\'java.exe\'" get commandline, processid'
-        result = subprocess.run(cmd, capture_output=True, text=True, shell=True)
-        
-        found = False
-        for line in result.stdout.splitlines():
-            if SERVER_JAR in line:
-                parts = line.split()
-                if parts:
-                    pid = parts[-1].strip()
-                    if pid.isdigit():
-                        log(f"Found running server (PID: {pid}). Stopping...")
-                        subprocess.run(f"taskkill /PID {pid} /F", shell=True)
-                        found = True
-        
-        if not found:
-            log("No running Hytale server instance found.")
-        else:
-            time.sleep(5) 
+    if IS_WINDOWS:
+        try:
+            cmd = 'wmic process where "name=\'java.exe\'" get commandline, processid'
+            result = subprocess.run(cmd, capture_output=True, text=True, shell=True)
             
-    except Exception as e:
-        log(f"Error checking/stopping server: {e}")
+            found = False
+            for line in result.stdout.splitlines():
+                if SERVER_JAR in line:
+                    parts = line.split()
+                    if parts:
+                        pid = parts[-1].strip()
+                        if pid.isdigit():
+                            log(f"Found running server (PID: {pid}). Stopping...")
+                            subprocess.run(f"taskkill /PID {pid} /F", shell=True)
+                            found = True
+            
+            if not found:
+                log("No running Hytale server instance found.")
+            else:
+                time.sleep(5) 
+                
+        except Exception as e:
+            log(f"Error checking/stopping server: {e}")
+            
+    else: # Linux/Unix
+        try:
+            # pgrep -f matches against full command line
+            cmd = ["pgrep", "-f", SERVER_JAR]
+            result = subprocess.run(cmd, capture_output=True, text=True)
+            
+            if result.returncode == 0 and result.stdout.strip():
+                pids = result.stdout.strip().splitlines()
+                for pid in pids:
+                    log(f"Found running server (PID: {pid}). Stopping...")
+                    subprocess.run(["kill", pid])
+                
+                # Wait loop for it to close
+                time.sleep(5)
+            else:
+                 log("No running Hytale server instance found.")
+                 
+        except Exception as e:
+            log(f"Error checking/stopping server: {e}")
 
 def update_server():
     """Runs the Hytale update command."""
@@ -152,11 +183,9 @@ def update_server():
     log("Checking for updates (Running Hytale Downloader)...")
     
     try:
-        # Running the downloader with no args downloads the latest release per manual
         cmd = updater_cmd 
         
         log(f"Executing: {' '.join(cmd)}")
-        # We allow it to print to stdout so user sees progress
         process = subprocess.run(cmd, text=True)
         
         if process.returncode == 0:
@@ -186,9 +215,17 @@ def start_server(assets_path):
             
         cmd.extend(["-jar", SERVER_JAR, "--assets", assets_path])
         
-        creationflags = subprocess.CREATE_NEW_CONSOLE
-        subprocess.Popen(cmd, creationflags=creationflags)
-        log(f"Server launched in new console.")
+        if IS_WINDOWS:
+            creationflags = subprocess.CREATE_NEW_CONSOLE
+            subprocess.Popen(cmd, creationflags=creationflags)
+            log(f"Server launched in new console.")
+        else:
+            # On Linux, verify if we should detach or run in foreground.
+            # "no gui" usually means headless.
+            # If we just Popen, it shares current stdout/stderr or goes background.
+            # start_new_session=True makes it leader of new session (detach from tty).
+            subprocess.Popen(cmd, start_new_session=True)
+            log(f"Server launched (background process). check logs/ folder for output.")
         
     except Exception as e:
         log(f"Failed to start server: {e}")
