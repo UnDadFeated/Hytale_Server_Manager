@@ -39,11 +39,12 @@ def check_java_version():
              return True
         else:
             log(f"WARNING: Java 25 not detected. Output:\n{output}")
-            log("Please install Java 25 (e.g., Adoptium Eclipse Temurin).")
+            log("Please install Java 25. Download it here: https://adoptium.net/temurin/releases/?version=25")
             return False
             
     except FileNotFoundError:
         log("ERROR: Java not found in PATH.")
+        log("Please install Java 25. Download it here: https://adoptium.net/temurin/releases/?version=25")
         return False
 
 def check_assets():
@@ -81,7 +82,7 @@ def ensure_updater():
         log("Updater jar found.")
         return ["java", "-jar", "hytale-downloader.jar"]
 
-    log(f"Updater not found. Downloading from {UPDATER_ZIP_URL}...")
+    log(f"Updater CLI not found. Downloading the download cli from {UPDATER_ZIP_URL}...")
     
     try:
         urllib.request.urlretrieve(UPDATER_ZIP_URL, UPDATER_ZIP_FILE)
