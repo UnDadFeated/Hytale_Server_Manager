@@ -239,6 +239,16 @@ class HytaleUpdaterCore:
                          os.remove(AOT_FILE)
                      except Exception as e:
                          self.log(f"Warning: Failed to remove AOT cache: {e}")
+                
+                # Cleanup Downloader
+                if updater_cmd and os.path.exists(updater_cmd[0].replace("./", "")):
+                     downloader_path = updater_cmd[0].replace("./", "")
+                     self.log(f"Cleaning up downloader: {downloader_path}")
+                     try:
+                         os.remove(downloader_path)
+                     except Exception as e:
+                         self.log(f"Warning: Failed to remove downloader: {e}")
+
             else:
                 self.log(f"Update process reported an issue (Exit Code: {return_code}).")
         except Exception as e:

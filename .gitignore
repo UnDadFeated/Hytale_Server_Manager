@@ -1,7 +1,18 @@
 # Python
 __pycache__/
 *.py[cod]
-*$py.class
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Hytale Downloader Artifacts
+hytale-downloader-linux-amd64
+hytale-downloader-windows-amd64.exe
+QUICKSTART.md
 
 # Logs
 *.log
