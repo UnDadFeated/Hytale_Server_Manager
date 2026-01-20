@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Logs
+*.log
+hytale_updater.log
+
+# Hytale
+hytale-downloader.zip
+Assets.zip
+HytaleServer.jar
+HytaleServer.aot
+# Keep the script and version file, ignore the server binaries/assets that are downloaded
+# unless the user wants them? usually server artifacts are ignored.
+# But checking the previous user intent, they just wanted the script in the repo.
+# So we ignore downloaded binaries.
+
+# OS
+.DS_Store
+Thumbs.db
