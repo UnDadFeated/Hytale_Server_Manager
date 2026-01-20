@@ -8,9 +8,9 @@ import urllib.request
 import zipfile
 import threading
 import queue
-import platform
 import re
 import signal
+import json
 
 import version
 
@@ -24,7 +24,9 @@ UPDATER_EXECUTABLE = "hytale-downloader.exe" if IS_WINDOWS else "hytale-download
 ASSETS_FILE = "Assets.zip"
 SERVER_MEMORY = "4G" 
 AOT_FILE = "HytaleServer.aot"
+AOT_FILE = "HytaleServer.aot"
 LOG_FILE = "hytale_updater.log"
+CONFIG_FILE = "hytale_updater_config.json"
 
 # --- Core Logic ---
 class HytaleUpdaterCore:
@@ -291,10 +293,15 @@ def run_gui_mode():
                 "button": "#e0e0e0"
             }
             self.is_dark_mode = True 
-            self.colors = self.dark_theme
+            
+            # Load Config
+            self.config = self.load_config()
+            self.is_dark_mode = self.config.get("dark_mode", True)
+            self.colors = self.dark_theme if self.is_dark_mode else self.light_theme
 
-            self.enable_logging_var = tk.BooleanVar(value=True)
-            self.check_updates_var = tk.BooleanVar(value=True)
+            self.enable_logging_var = tk.BooleanVar(value=self.config.get("enable_logging", True))
+            self.check_updates_var = tk.BooleanVar(value=self.config.get("check_updates", True))
+            self.auto_start_var = tk.BooleanVar(value=self.config.get("auto_start", False))
             self.is_server_running = False
             self.server_process = None
             
@@ -305,7 +312,10 @@ def run_gui_mode():
             self.log_queue = queue.Queue()
             self.update_log_from_queue()
             
-            self.core = HytaleUpdaterCore(self.log_queue_wrapper, None) 
+            self.core = HytaleUpdaterCore(self.log_queue_wrapper, None)
+
+            if self.auto_start_var.get():
+                self.root.after(1000, self.run_full_process) 
 
         def create_widgets(self):
             # Main Container
@@ -317,11 +327,14 @@ def run_gui_mode():
             control_frame.pack(fill=tk.X)
             
             # Checkboxes
-            self.chk_logging = ttk.Checkbutton(control_frame, text="Enable File Logging", variable=self.enable_logging_var)
+            self.chk_logging = ttk.Checkbutton(control_frame, text="Enable File Logging", variable=self.enable_logging_var, command=self.save_config)
             self.chk_logging.pack(side=tk.LEFT, padx=5)
             
-            self.chk_updates = ttk.Checkbutton(control_frame, text="Check for Updates", variable=self.check_updates_var)
+            self.chk_updates = ttk.Checkbutton(control_frame, text="Check for Updates", variable=self.check_updates_var, command=self.save_config)
             self.chk_updates.pack(side=tk.LEFT, padx=5)
+
+            self.chk_autostart = ttk.Checkbutton(control_frame, text="Auto-Start Server", variable=self.auto_start_var, command=self.save_config)
+            self.chk_autostart.pack(side=tk.LEFT, padx=5)
 
             # Theme Toggle
             self.theme_btn = ttk.Button(control_frame, text="☀/🌙", command=self.toggle_theme, width=10)
@@ -361,6 +374,7 @@ def run_gui_mode():
             self.is_dark_mode = not self.is_dark_mode
             self.colors = self.dark_theme if self.is_dark_mode else self.light_theme
             self.apply_theme()
+            self.save_config()
 
         def apply_theme(self):
             bg = self.colors["bg"]
@@ -526,6 +540,28 @@ def run_gui_mode():
                      # self.server_process.terminate()
             else:
                 self.core.log("No server process managed by this tool is running.")
+
+        def load_config(self):
+            if os.path.exists(CONFIG_FILE):
+                try:
+                    with open(CONFIG_FILE, "r") as f:
+                        return json.load(f)
+                except Exception as e:
+                    print(f"Error loading config: {e}")
+            return {}
+
+        def save_config(self):
+            config = {
+                "dark_mode": self.is_dark_mode,
+                "enable_logging": self.enable_logging_var.get(),
+                "check_updates": self.check_updates_var.get(),
+                "auto_start": self.auto_start_var.get()
+            }
+            try:
+                with open(CONFIG_FILE, "w") as f:
+                    json.dump(config, f, indent=4)
+            except Exception as e:
+                print(f"Error saving config: {e}")
 
         def reset_ui_state(self):
             self.root.after(0, lambda: self.start_button.config(state=tk.NORMAL))
