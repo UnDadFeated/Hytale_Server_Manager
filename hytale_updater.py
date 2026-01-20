@@ -9,6 +9,7 @@ import zipfile
 import threading
 import queue
 import platform
+import re
 
 import version
 
@@ -260,48 +261,153 @@ def run_gui_mode():
         def __init__(self, root):
             self.root = root
             self.root.title(f"Hytale Server Updater v{version.__version__}")
-            self.root.geometry("800x600")
+            self.root.geometry("900x650")
+
+            # --- Theme Configuration ---
+            self.dark_theme = {
+                "bg": "#1e1e1e", "fg": "#d4d4d4",
+                "text_bg": "#1e1e1e", "text_fg": "#d4d4d4",
+                "select_bg": "#264f78", "select_fg": "#ffffff",
+                "button": "#3c3c3c"
+            }
+            self.light_theme = {
+                "bg": "#f0f0f0", "fg": "#000000",
+                "text_bg": "#ffffff", "text_fg": "#000000",
+                "select_bg": "#0078d7", "select_fg": "#ffffff",
+                "button": "#e0e0e0"
+            }
+            self.is_dark_mode = True 
+            self.colors = self.dark_theme
 
             self.enable_logging_var = tk.BooleanVar(value=True)
             self.check_updates_var = tk.BooleanVar(value=True)
             self.is_server_running = False
             
             self.create_widgets()
+            self.setup_tags()
+            self.apply_theme()
+            
             self.log_queue = queue.Queue()
             self.update_log_from_queue()
             
             self.core = HytaleUpdaterCore(self.log_queue_wrapper, None) 
+
+        def create_widgets(self):
+            # Main Container
+            self.main_frame = ttk.Frame(self.root)
+            self.main_frame.pack(fill=tk.BOTH, expand=True)
+
+            # Control Bar
+            control_frame = ttk.Frame(self.main_frame, padding="10")
+            control_frame.pack(fill=tk.X)
+            
+            # Checkboxes
+            self.chk_logging = ttk.Checkbutton(control_frame, text="Enable File Logging", variable=self.enable_logging_var)
+            self.chk_logging.pack(side=tk.LEFT, padx=5)
+            
+            self.chk_updates = ttk.Checkbutton(control_frame, text="Check for Updates", variable=self.check_updates_var)
+            self.chk_updates.pack(side=tk.LEFT, padx=5)
+
+            # Theme Toggle
+            self.theme_btn = ttk.Button(control_frame, text="☀/🌙 Theme", command=self.toggle_theme, width=10)
+            self.theme_btn.pack(side=tk.LEFT, padx=15)
+
+            # Action Buttons
+            self.start_button = ttk.Button(control_frame, text="Start Server", command=self.run_full_process)
+            self.start_button.pack(side=tk.RIGHT, padx=5)
+            
+            self.stop_button = ttk.Button(control_frame, text="Stop Server", command=self.stop_server_handler, state=tk.DISABLED)
+            self.stop_button.pack(side=tk.RIGHT, padx=5)
+
+            # Console Area
+            self.console_frame = ttk.Frame(self.main_frame, padding="5")
+            self.console_frame.pack(fill=tk.BOTH, expand=True)
+            
+            self.console_area = scrolledtext.ScrolledText(self.console_frame, state=tk.DISABLED, font=("Consolas", 9))
+            self.console_area.pack(fill=tk.BOTH, expand=True)
+
+        def setup_tags(self):
+            # ANSI Colors
+            colors = {
+                "30": "black", "31": "red", "32": "green", "33": "yellow",
+                "34": "blue", "35": "magenta", "36": "cyan", "37": "white",
+                "90": "gray", "91": "lightcoral", "92": "lightgreen", "93": "lightyellow",
+                "94": "lightblue", "95": "violet", "96": "lightcyan", "97": "white"
+            }
+            # Add bold variants? simplified for now
+            for code, color in colors.items():
+                self.console_area.tag_config(f"ansi_{code}", foreground=color)
+            
+            # Standard Tags
+            self.console_area.tag_config("stderr", foreground="red")
+            self.console_area.tag_config("RE", foreground="red") # Runtime Error generic
+
+        def toggle_theme(self):
+            self.is_dark_mode = not self.is_dark_mode
+            self.colors = self.dark_theme if self.is_dark_mode else self.light_theme
+            self.apply_theme()
+
+        def apply_theme(self):
+            bg = self.colors["bg"]
+            fg = self.colors["fg"]
+            text_bg = self.colors["text_bg"]
+            text_fg = self.colors["text_fg"]
+            
+            self.root.configure(bg=bg)
+            
+            style = ttk.Style()
+            style.theme_use('clam') 
+            
+            style.configure(".", background=bg, foreground=fg)
+            style.configure("TFrame", background=bg)
+            style.configure("TButton", background=self.colors["button"], foreground=fg, borderwidth=1)
+            style.map("TButton", background=[("active", self.colors["select_bg"])], foreground=[("active", self.colors["select_fg"])])
+            style.configure("TCheckbutton", background=bg, foreground=fg)
+            
+            self.console_area.config(bg=text_bg, fg=text_fg, insertbackground=fg, selectbackground=self.colors["select_bg"], selectforeground=self.colors["select_fg"])
 
         def log_queue_wrapper(self, message, tag=None):
             timestamp = datetime.datetime.now().strftime("[%Y-%m-%d %H:%M:%S]")
             full_msg = f"{timestamp} {message}\n"
             self.log_queue.put((full_msg, tag))
             if self.enable_logging_var.get():
-                with open(LOG_FILE, "a") as f:
-                    f.write(full_msg)
-
-        def create_widgets(self):
-            control_frame = ttk.Frame(self.root, padding="10")
-            control_frame.pack(fill=tk.X)
-            ttk.Checkbutton(control_frame, text="Enable File Logging", variable=self.enable_logging_var).pack(side=tk.LEFT, padx=5)
-            ttk.Checkbutton(control_frame, text="Check for Updates", variable=self.check_updates_var).pack(side=tk.LEFT, padx=5)
-            self.start_button = ttk.Button(control_frame, text="Start Server", command=self.run_full_process)
-            self.start_button.pack(side=tk.RIGHT, padx=5)
-            self.stop_button = ttk.Button(control_frame, text="Stop Server", command=self.stop_server_handler, state=tk.DISABLED)
-            self.stop_button.pack(side=tk.RIGHT, padx=5)
-            self.console_area = scrolledtext.ScrolledText(self.root, state=tk.DISABLED, font=("Consolas", 10))
-            self.console_area.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
-            self.console_area.tag_config("stderr", foreground="red")
-            self.console_area.tag_config("stdout", foreground="black")
+                # Strip ANSI codes for file log
+                clean_msg = re.sub(r'\x1b\[[0-9;]*m', '', full_msg)
+                with open(LOG_FILE, "a", encoding="utf-8") as f:
+                    f.write(clean_msg)
 
         def update_log_from_queue(self):
             while not self.log_queue.empty():
                 msg, tag = self.log_queue.get()
                 self.console_area.config(state=tk.NORMAL)
-                self.console_area.insert(tk.END, msg, tag)
+                
+                if tag == "stderr":
+                     self.console_area.insert(tk.END, msg, "stderr")
+                else:
+                    self.insert_ansi_text(msg)
+                
                 self.console_area.see(tk.END)
                 self.console_area.config(state=tk.DISABLED)
             self.root.after(100, self.update_log_from_queue)
+
+        def insert_ansi_text(self, text):
+            # Split by ANSI Escape codes
+            # Regex to capture content and codes: (\x1b\[[0-9;]*m)
+            parts = re.split(r'(\x1b\[[0-9;]*m)', text)
+            
+            current_tag = None
+            for part in parts:
+                if part.startswith('\x1b['):
+                    # Parse code
+                    code = part.strip()[2:-1]
+                    if code == "0":
+                        current_tag = None # Reset
+                    elif code in ["30","31","32","33","34","35","36","37","90","91","92","93","94","95","96","97"]:
+                        current_tag = f"ansi_{code}"
+                else:
+                    if part:
+                         tags = (current_tag,) if current_tag else ()
+                         self.console_area.insert(tk.END, part, tags)
 
         def run_full_process(self):
             self.start_button.config(state=tk.DISABLED)

@@ -5,8 +5,9 @@ A Python automation script for managing Dedicated Hytale Servers.
 ## Features
 
 *   **GUI & Console Modes**: 
-    *   **GUI**: User-friendly interface with logging toggles, update checks, and integrated console.
+    *   **GUI**: User-friendly interface with **Dark/Light Mode Themes**, logging toggles, and an integrated console.
     *   **Console**: Headless mode (`-nogui`) for automated environments.
+    *   **Visuals**: Supports **ANSI Colors** in the GUI console for better readability.
 *   **Platform Checks**: Verifies Java 25 installation.
 *   **Asset Management**: Checks for `Assets.zip` and prompts to locate/copy it if missing.
 *   **Auto-Updater**: Automatically downloads the Hytale Downloader CLI and updates server files.
@@ -53,5 +54,5 @@ SERVER_MEMORY = "4G" # Change to "8G" etc.
 
 ## Versioning
 
-Current Version: 1.4
+Current Version: 1.5
 See `version.py` for the tracked version number.
