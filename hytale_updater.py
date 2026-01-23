@@ -47,7 +47,7 @@ def load_config():
         "enable_auto_restart": True,
         "enable_schedule": False,
         "restart_interval": 12, # Hours
-        "server_memory": "4G"
+        "server_memory": "8G"
     }
     if os.path.exists(CONFIG_FILE):
         try:
@@ -458,7 +458,10 @@ def run_gui_mode():
             self.var_schedule = tk.BooleanVar(value=self.config.get("enable_schedule", False))
             self.var_discord_url = tk.StringVar(value=self.config.get("discord_webhook", ""))
             self.var_schedule_time = tk.StringVar(value=str(self.config.get("restart_interval", 12)))
-            self.var_memory = tk.StringVar(value=self.config.get("server_memory", "4G"))
+            self.var_schedule_time = tk.StringVar(value=str(self.config.get("restart_interval", 12)))
+            self.var_memory = tk.StringVar(value=self.config.get("server_memory", "8G"))
+            
+            self.var_memory.trace_add("write", self.on_config_change) # Trace for reboot warning
             
             self.var_memory.trace_add("write", self.on_config_change) # Trace for reboot warning
 
@@ -537,7 +540,9 @@ def run_gui_mode():
             self.lbl_stats.pack(pady=5)
             
             # 3. Console
-            self.console = scrolledtext.ScrolledText(self.root, font=("Consolas", 10), state=tk.DISABLED)
+            # 3. Console
+            self.console = scrolledtext.ScrolledText(self.root, font=("Consolas", 8), state=tk.DISABLED)
+            self.console.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
             self.console.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
             self.setup_tags()
             
