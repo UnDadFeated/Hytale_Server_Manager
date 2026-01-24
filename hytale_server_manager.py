@@ -385,10 +385,9 @@ class HytaleUpdaterCore:
 
     def send_command(self, command):
         if self.server_process and self.server_process.poll() is None:
-            try:
                 self.log(f"> {command}")
-                # Write bytes directly. Using LF (\n) as standard for Java processes.
-                # Refactored to binary pipes to ensure no interference.
+                # Reverting to LF (\n) as CRLF didn't help. 
+                # Stripping leading / in UI callback might help if server confuses it.
                 msg = (command + "\n").encode('utf-8')
                 self.server_process.stdin.write(msg)
                 self.server_process.stdin.flush()
@@ -752,17 +751,16 @@ def run_gui_mode():
             self.console.pack(fill=tk.BOTH, expand=True, padx=10, pady=(5, 0))
             self.setup_tags()
 
-            # 3.5 Input
-            input_frame = ttk.Frame(self.root, padding=(10, 5))
-            input_frame.pack(fill=tk.X)
+            # 3.5 Input (Tight layout, no button)
+            input_frame = ttk.Frame(self.root)
+            input_frame.pack(fill=tk.X, padx=10, pady=(2, 5))
             
             self.input_var = tk.StringVar()
             self.entry_cmd = ttk.Entry(input_frame, textvariable=self.input_var)
             self.entry_cmd.pack(side=tk.LEFT, fill=tk.X, expand=True)
             self.entry_cmd.bind("<Return>", lambda e: self.send_command_ui())
             
-            btn_send = ttk.Button(input_frame, text="Send", command=self.send_command_ui)
-            btn_send.pack(side=tk.LEFT, padx=(5, 0))
+            # Removed Send Button as requested
             
             # 4. Footer (Donation)
             footer = ttk.Frame(self.root, padding="10")
@@ -784,9 +782,13 @@ def run_gui_mode():
         def send_command_ui(self):
             cmd = self.input_var.get().strip()
             if cmd:
+                # Strip leading slash if present, as console commands generally don't need it
+                # and it might be causing double-slash issues or parsing weirdness
+                if cmd.startswith("/"):
+                    cmd = cmd[1:]
+                    
                 self.core.send_command(cmd)
                 self.input_var.set("")
-                # Keep focus
                 self.entry_cmd.focus()
 
 
