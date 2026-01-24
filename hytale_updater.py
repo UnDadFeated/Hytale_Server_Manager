@@ -549,12 +549,10 @@ def run_gui_mode():
             ttk.Button(btn_frame, text="📂 Server", command=lambda: self.open_folder("."), width=8).pack(side=tk.LEFT, padx=1)
             ttk.Button(btn_frame, text="📂 World", command=lambda: self.open_folder(WORLD_DIR), width=8).pack(side=tk.LEFT, padx=1)
             ttk.Button(btn_frame, text="📂 Backup", command=lambda: self.open_folder(BACKUP_DIR), width=8).pack(side=tk.LEFT, padx=1)
+            ttk.Button(btn_frame, text="📂 Local", command=lambda: self.open_folder(self.get_local_saves_path()), width=8).pack(side=tk.LEFT, padx=1)
             
             # 3. Console
-            # 3. Console
-            # 3. Console
             self.console = scrolledtext.ScrolledText(self.root, font=("Consolas", 8), state=tk.DISABLED)
-            self.console.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
             self.console.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
             self.setup_tags()
             
@@ -683,6 +681,12 @@ def run_gui_mode():
             
             self.root.configure(bg=bg)
             self.console.config(bg=txt_bg, fg=txt_fg, insertbackground=fg)
+
+        def get_local_saves_path(self):
+            if IS_WINDOWS:
+                return os.path.join(os.getenv('APPDATA'), 'Hytale', 'UserData', 'Saves', 'universe', 'worlds')
+            else:
+                 return os.path.expanduser("~/.local/share/Hytale/UserData/Saves/universe/worlds")
 
         def open_folder(self, path):
              path = os.path.abspath(path)
