@@ -470,7 +470,7 @@ class HytaleUpdaterCore:
             creationflags = subprocess.CREATE_NEW_PROCESS_GROUP if IS_WINDOWS else 0
             
             self.server_process = subprocess.Popen(
-                cmd, env=env,
+                cmd,
                 stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE,
                 startupinfo=startupinfo, creationflags=creationflags
             )
