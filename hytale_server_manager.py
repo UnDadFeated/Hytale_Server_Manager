@@ -392,9 +392,6 @@ class HytaleUpdaterCore:
                 # We send exactly what the user types + \n.
                 msg = (command + "\n").encode('utf-8')
                 
-                # Debug: log hex to verify what we are sending
-                self.log(f"[Debug] Sending bytes: {msg.hex()}")
-                
                 self.server_process.stdin.write(msg)
                 self.server_process.stdin.flush()
             except Exception as e:
