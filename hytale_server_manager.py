@@ -44,7 +44,8 @@ def load_config():
         "enable_schedule": False,
         "restart_interval": 12,
         "server_memory": "8G",
-        "max_backups": 3
+        "max_backups": 3,
+        "prevent_updates": False
     }
     if os.path.exists(CONFIG_FILE):
         try:
@@ -242,6 +243,11 @@ class HytaleUpdaterCore:
     def update_server(self):
         """Handles the server update process using the Hytale downloader."""
         updater_cmd = self.ensure_updater()
+        
+        if self.config.get("prevent_updates", False):
+            self.log("Auto-updates are DISABLED in config. Skipping update check.")
+            return
+
         if not updater_cmd:
             self.log("Cannot run update, updater not available.")
             return
@@ -576,6 +582,8 @@ def run_gui_mode():
             
             self.var_memory.trace_add("write", self.on_config_change)
 
+            self.var_prevent_updates = tk.BooleanVar(value=self.config.get("prevent_updates", False))
+
             self.status_var = tk.StringVar(value="Status: Stopped")
             self.uptime_var = tk.StringVar(value="Uptime: 00:00:00")
 
@@ -618,27 +626,32 @@ def run_gui_mode():
             
             c_col2 = ttk.Frame(options_row)
             c_col2.pack(side=tk.LEFT, fill=tk.Y, padx=(0, 20))
+            
+            ttk.Checkbutton(c_col2, text="Prevent Auto-Update (Modded)", variable=self.var_prevent_updates, command=self.save).pack(anchor="w", pady=(0, 5))
 
             bkp_frame = ttk.Frame(c_col2)
             bkp_frame.pack(anchor="w")
             ttk.Checkbutton(bkp_frame, text="Backup World on Start", variable=self.var_backup, command=self.save).pack(side=tk.LEFT)
             ttk.Label(bkp_frame, text="Max:").pack(side=tk.LEFT, padx=(5,2))
             ttk.Entry(bkp_frame, textvariable=self.var_max_backups, width=3).pack(side=tk.LEFT)
-            
-            dsc_frame = ttk.Frame(c_col2)
+
+            c_col3_center = ttk.Frame(options_row)
+            c_col3_center.pack(side=tk.LEFT, fill=tk.Y, padx=(0, 10))
+
+            dsc_frame = ttk.Frame(c_col3_center)
             dsc_frame.pack(anchor="w", pady=2)
             ttk.Checkbutton(dsc_frame, text="Discord Webhook", variable=self.var_discord, command=self.save).pack(side=tk.LEFT)
-            ttk.Entry(dsc_frame, textvariable=self.var_discord_url, width=25).pack(side=tk.LEFT, padx=5)
+            ttk.Entry(dsc_frame, textvariable=self.var_discord_url, width=20).pack(side=tk.LEFT, padx=5)
             
-            sch_frame = ttk.Frame(c_col2)
+            sch_frame = ttk.Frame(c_col3_center)
             sch_frame.pack(anchor="w", pady=2)
             ttk.Checkbutton(sch_frame, text="Schedule Restart (Hrs)", variable=self.var_schedule, command=self.save).pack(side=tk.LEFT)
             ttk.Entry(sch_frame, textvariable=self.var_schedule_time, width=5).pack(side=tk.LEFT, padx=5)
             
-            mem_frame = ttk.Frame(c_col2)
+            mem_frame = ttk.Frame(c_col3_center)
             mem_frame.pack(anchor="w", pady=2)
             ttk.Label(mem_frame, text="Server RAM:").pack(side=tk.LEFT)
-            ttk.Entry(mem_frame, textvariable=self.var_memory, width=5).pack(side=tk.LEFT, padx=5)
+            ttk.Entry(mem_frame, textvariable=self.var_memory, width=6).pack(side=tk.LEFT, padx=5)
             self.lbl_reboot = ttk.Label(mem_frame, text="⚠ Reboot Required", foreground="orange")
 
             c_col3 = ttk.Frame(controls_frame)
@@ -739,7 +752,9 @@ def run_gui_mode():
                 "discord_webhook": self.var_discord_url.get(),
                 "restart_interval": self.var_schedule_time.get(),
                 "server_memory": self.var_memory.get(),
-                "max_backups": int(self.var_max_backups.get()) if self.var_max_backups.get().isdigit() else 3
+                "server_memory": self.var_memory.get(),
+                "max_backups": int(self.var_max_backups.get()) if self.var_max_backups.get().isdigit() else 3,
+                "prevent_updates": self.var_prevent_updates.get()
             })
             self.core.config = self.config
             save_config(self.config)
@@ -831,17 +846,35 @@ def run_gui_mode():
 
 def print_help():
     """Prints the help message."""
+    abs_config_path = os.path.abspath(CONFIG_FILE)
     print(f"Hytale Server Manager v{version.__version__}")
-    print("--------------------------------------------------")
+    print("=" * 60)
     print("Usage: python hytale_server_manager.py [options]")
-    print("\nOptions:")
-    print("  -nogui       : Run in console-only mode (headless).")
+    print("\nCommand Line Options:")
+    print("  -nogui       : Run in console-only mode (headless). Useful for servers.")
     print("  -help, --help: Show this help message.")
     print("\nDescription:")
-    print("  Manages the Hytale Dedicated Server, including auto-updates,")
-    print("  backups, crash detection, and discord notifications.")
-    print("\nConfiguration:")
-    print(f"  stored in {CONFIG_FILE} (generated on first run).")
+    print("  Manages the Hytale Dedicated Server life-cycle.")
+    print("  Features: Auto-Updates, Crash Detection, Auto-Restarts, World Backups, Discord Webhooks.")
+    
+    print("\nConfiguration File:")
+    print(f"  Location: {abs_config_path}")
+    print("\n  The configuration is a JSON file with the following options:")
+    print("  - last_server_version : Tracks the installed server version.")
+    print("  - dark_mode           : (GUI) Enable dark theme. [true/false]")
+    print("  - enable_logging      : Write logs to hytale_server_manager.log. [true/false]")
+    print("  - check_updates       : Check for updates on startup. [true/false]")
+    print("  - prevent_updates     : PREVENT updates even if available (for Modded servers). [true/false]")
+    print("  - auto_start          : Automatically start the server when this script runs. [true/false]")
+    print("  - enable_backups      : Zip the world folder before starting. [true/false]")
+    print("  - max_backups         : Number of backups to keep. [Integer]")
+    print("  - enable_discord      : Enable Discord Webhook notifications. [true/false]")
+    print("  - discord_webhook     : The Discord Webhook URL. [String]")
+    print("  - enable_auto_restart : Restart server automatically on crash/stop. [true/false]")
+    print("  - enable_schedule     : Enable scheduled periodic restarts. [true/false]")
+    print("  - restart_interval    : Hours between scheduled restarts. [Float]")
+    print("  - server_memory       : Java Heap Size (e.g., '4G', '8G'). [String]")
+    print("=" * 60)
     sys.exit(0)
 
 def main():
