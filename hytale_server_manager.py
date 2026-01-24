@@ -387,16 +387,11 @@ class HytaleUpdaterCore:
         if self.server_process and self.server_process.poll() is None:
             try:
                 self.log(f"> {command}")
-                # Write bytes directly to avoid OS-specific line ending translation (CRLF)
-                # which seems to confuse the server's parser.
-                # v1.9.10: Trying explicit CRLF (\r\n) for Windows compatibility.
-                msg = (command + "\r\n").encode('utf-8')
-                
-                # Debug: log hex to verify what we are sending
-                # self.log(f"[Debug] Sending bytes: {msg.hex()}")
-                
-                self.server_process.stdin.buffer.write(msg)
-                self.server_process.stdin.buffer.flush()
+                # Write bytes directly. Using LF (\n) as standard for Java processes.
+                # Refactored to binary pipes to ensure no interference.
+                msg = (command + "\n").encode('utf-8')
+                self.server_process.stdin.write(msg)
+                self.server_process.stdin.flush()
             except Exception as e:
                 self.log(f"Failed to send command: {e}")
         else:
@@ -475,8 +470,8 @@ class HytaleUpdaterCore:
             creationflags = subprocess.CREATE_NEW_PROCESS_GROUP if IS_WINDOWS else 0
             
             self.server_process = subprocess.Popen(
-                cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE,
-                text=True, bufsize=1, universal_newlines=True, 
+                cmd, env=env,
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE,
                 startupinfo=startupinfo, creationflags=creationflags
             )
             self.start_time = datetime.datetime.now()
@@ -500,8 +495,12 @@ class HytaleUpdaterCore:
 
     def _read_stream(self, stream, tag):
         try:
-            for line in iter(stream.readline, ''):
-                if line: self.log(line.strip(), tag)
+            # Read bytes, decode manually
+            for line_bytes in iter(stream.readline, b''):
+                if line_bytes:
+                    # Decode (handle potential errors)
+                    line = line_bytes.decode('utf-8', errors='replace').strip()
+                    if line: self.log(line, tag)
         except: pass
         finally: stream.close()
 
