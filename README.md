@@ -1,4 +1,4 @@
-# Hytale Server Updater
+# Hytale Server Manager
 
 A Python automation script for managing Dedicated Hytale Servers.
 
@@ -22,7 +22,7 @@ A Python automation script for managing Dedicated Hytale Servers.
 
 ## Installation
 
-1.  Clone this repository or download `hytale_updater.py` and `version.py`.
+1.  Clone this repository or download `hytale_server_manager.py` and `version.py`.
 2.  Place the scripts in your desired server folder.
 
 ## Usage
@@ -30,7 +30,7 @@ A Python automation script for managing Dedicated Hytale Servers.
 ### Graphical Mode (Default)
 Run the script without arguments to open the GUI:
 ```bash
-python hytale_updater.py
+python hytale_server_manager.py
 ```
 *   **Controls**: Toggle Backups, Discord Webhooks, and Auto-Restart directly from the UI.
 *   **Quick Access**: Open Server, World, and Backup folders.
@@ -39,19 +39,19 @@ python hytale_updater.py
 ### Console Mode (Headless)
 Run with the `-nogui` argument for CLI-only operation:
 ```bash
-python hytale_updater.py -nogui
+python hytale_server_manager.py -nogui
 ```
-*   Configuration is loaded from `hytale_updater_config.json`.
+*   Configuration is loaded from `hytale_server_manager_config.json`.
 
 ### Help
 View all command line arguments:
 ```bash
-python hytale_updater.py -help
+python hytale_server_manager.py -help
 ```
 
 ## Configuration
 
-Settings are saved to `hytale_updater_config.json`. Key features:
+Settings are saved to `hytale_server_manager_config.json`. Key features:
 ```json
 {
   "enable_backups": true,

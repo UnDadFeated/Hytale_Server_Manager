@@ -28,8 +28,8 @@ UPDATER_EXECUTABLE = "hytale-downloader.exe" if IS_WINDOWS else "hytale-download
 ASSETS_FILE = "Assets.zip"
 # SERVER_MEMORY removed as constant, now in config
 AOT_FILE = "HytaleServer.aot"
-LOG_FILE = "hytale_updater.log"
-CONFIG_FILE = "hytale_updater_config.json"
+LOG_FILE = "hytale_server_manager.log"
+CONFIG_FILE = "hytale_server_manager_config.json"
 BACKUP_DIR = "universe/backups"
 WORLD_DIR = "universe/worlds"
 
@@ -735,9 +735,9 @@ def run_gui_mode():
     root.mainloop()
 
 def print_help():
-    print(f"Hytale Server Updater v{version.__version__}")
+    print(f"Hytale Server Manager v{version.__version__}")
     print("--------------------------------------------------")
-    print("Usage: python hytale_updater.py [options]")
+    print("Usage: python hytale_server_manager.py [options]")
     print("\nOptions:")
     print("  -nogui       : Run in console-only mode (headless).")
     print("  -help, --help: Show this help message.")
