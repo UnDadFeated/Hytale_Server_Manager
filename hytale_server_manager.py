@@ -183,12 +183,7 @@ class HytaleUpdaterCore:
             # User request: "delete the new server zip that is downloaded"
             # We can delete it here if we don't want caching, OR we delete it at the end of update_server if we want it to persist for this run but not forever.
             # Let's delete it here to keep it clean as requested.
-            if os.path.exists(UPDATER_ZIP_FILE): 
-                try: 
-                    os.remove(UPDATER_ZIP_FILE)
-                    self.log(f"Deleted {UPDATER_ZIP_FILE}")
-                except Exception as e:
-                    self.log(f"Failed to delete zip: {e}")
+            # Zip is kept for caching (Smart Download)
 
             
             # Don't delete zip anymore to allow caching
