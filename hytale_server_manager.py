@@ -184,8 +184,11 @@ class HytaleUpdaterCore:
             # We can delete it here if we don't want caching, OR we delete it at the end of update_server if we want it to persist for this run but not forever.
             # Let's delete it here to keep it clean as requested.
             if os.path.exists(UPDATER_ZIP_FILE): 
-                try: os.remove(UPDATER_ZIP_FILE)
-                except: pass
+                try: 
+                    os.remove(UPDATER_ZIP_FILE)
+                    self.log(f"Deleted {UPDATER_ZIP_FILE}")
+                except Exception as e:
+                    self.log(f"Failed to delete zip: {e}")
 
             
             # Don't delete zip anymore to allow caching
@@ -364,16 +367,21 @@ class HytaleUpdaterCore:
             
             # Cleanup
             if os.path.exists(staging_dir): 
-                 try: shutil.rmtree(staging_dir)
-                 except: pass
+                 try: 
+                     shutil.rmtree(staging_dir)
+                     self.log(f"Cleaned up staging: {staging_dir}")
+                 except Exception as e:
+                     self.log(f"Failed to clean staging: {e}")
 
         except Exception as e:
             self.log(f"Update failed: {e}")
             self.log(traceback.format_exc())
             # Ensure cleanup on fail
             if os.path.exists(staging_dir): 
-                 try: shutil.rmtree(staging_dir)
-                 except: pass
+                 try: 
+                     shutil.rmtree(staging_dir)
+                 except Exception as e:
+                     self.log(f"Failed to clean staging after error: {e}")
 
     def send_command(self, command):
         if self.server_process and self.server_process.poll() is None:
@@ -460,7 +468,7 @@ class HytaleUpdaterCore:
             
             self.server_process = subprocess.Popen(
                 cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE,
-                text=True, bufsize=1, universal_newlines=True, 
+                text=True, bufsize=1, universal_newlines=True, newline='\n',
                 startupinfo=startupinfo, creationflags=creationflags
             )
             self.start_time = datetime.datetime.now()
