@@ -240,6 +240,33 @@ class HytaleUpdaterCore:
         except Exception:
             return None
 
+    def check_self_update(self):
+        """Checks for updates to the manager script from git master branch."""
+        if not self.config.get("check_updates", True):
+            return
+
+        self.log("Checking for manager updates (git master)...")
+        try:
+            # Fetch latest information from remote
+            subprocess.run(["git", "fetch", "origin", "master"], check=True, capture_output=True)
+            
+            # Get local and remote hashes
+            local_hash = subprocess.check_output(["git", "rev-parse", "HEAD"]).decode().strip()
+            remote_hash = subprocess.check_output(["git", "rev-parse", "origin/master"]).decode().strip()
+
+            if local_hash != remote_hash:
+                self.log("New manager version found. Updating from master...")
+                subprocess.run(["git", "pull", "origin", "master"], check=True)
+                self.log("Manager updated successfully. Restarting...")
+                
+                # Restart the script
+                python = sys.executable
+                os.execl(python, python, *sys.argv)
+            else:
+                self.log("Manager is up to date.")
+        except Exception as e:
+            self.log(f"Failed to check/update manager: {e}")
+
     def update_server(self):
         """Handles the server update process using the Hytale downloader."""
         updater_cmd = self.ensure_updater()
@@ -416,6 +443,7 @@ class HytaleUpdaterCore:
         self.stop_existing_server_process()
 
         if self.config.get("check_updates", True):
+            self.check_self_update()
             self.update_server()
 
         self.backup_world()
