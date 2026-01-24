@@ -388,9 +388,12 @@ class HytaleUpdaterCore:
             try:
                 self.log(f"> {command}")
                 
-                # Revert to standard pass-through with LF (\n).
-                # We send exactly what the user types + \n.
-                msg = (command + "\n").encode('utf-8')
+                # Experiment: Double Slash.
+                # If command starts with /, prepend another / to send //command.
+                # User hypothesis: Server strips first slash, leaving the second.
+                msg_str = "/" + command if command.startswith("/") else command
+                
+                msg = (msg_str + "\n").encode('utf-8')
                 
                 # Debug: log hex to verify what we are sending
                 self.log(f"[Debug] Sending bytes: {msg.hex()}")
