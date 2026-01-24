@@ -388,8 +388,13 @@ class HytaleUpdaterCore:
             try:
                 self.log(f"> {command}")
                 # Write bytes directly to avoid OS-specific line ending translation (CRLF)
-                # which seems to confuse the server's parser
-                msg = (command + "\n").encode('utf-8')
+                # which seems to confuse the server's parser.
+                # v1.9.10: Trying explicit CRLF (\r\n) for Windows compatibility.
+                msg = (command + "\r\n").encode('utf-8')
+                
+                # Debug: log hex to verify what we are sending
+                # self.log(f"[Debug] Sending bytes: {msg.hex()}")
+                
                 self.server_process.stdin.buffer.write(msg)
                 self.server_process.stdin.buffer.flush()
             except Exception as e:
