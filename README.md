@@ -65,5 +65,5 @@ Settings are saved to `hytale_updater_config.json`. Key features:
 
 ## Versioning
 
-Current Version: 1.9.0
+Current Version: 1.9.3
 See `version.py` for the tracked version number.

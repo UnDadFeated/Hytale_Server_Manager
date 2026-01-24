@@ -30,8 +30,9 @@ ASSETS_FILE = "Assets.zip"
 AOT_FILE = "HytaleServer.aot"
 LOG_FILE = "hytale_updater.log"
 CONFIG_FILE = "hytale_updater_config.json"
-BACKUP_DIR = "backups"
-WORLD_DIR = "world"
+BACKUP_DIR = "universe/backups"
+WORLD_DIR = "universe/worlds"
+
 
 # --- Core Logic ---
 def load_config():
@@ -250,9 +251,12 @@ class HytaleUpdaterCore:
 
     def backup_world(self):
         if not self.config.get("enable_backups", True): return
-        if not os.path.exists(WORLD_DIR): return
+        
+        if not os.path.exists(WORLD_DIR):
+             self.log(f"Backup skipped: World directory not found at {WORLD_DIR}")
+             return
 
-        self.log("Creating world backup...")
+        self.log(f"Creating world backup from {WORLD_DIR}...")
         if not os.path.exists(BACKUP_DIR): os.makedirs(BACKUP_DIR)
 
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -460,9 +464,12 @@ def run_gui_mode():
             self.var_schedule_time = tk.StringVar(value=str(self.config.get("restart_interval", 12)))
             self.var_memory = tk.StringVar(value=self.config.get("server_memory", "8G"))
             
+            
+            
             self.var_memory.trace_add("write", self.on_config_change) # Trace for reboot warning
 
-            self.stats_var = tk.StringVar(value="Status: Stopped")
+            self.status_var = tk.StringVar(value="Status: Stopped")
+            self.uptime_var = tk.StringVar(value="Uptime: 00:00:00")
 
             # Core
             self.log_queue = queue.Queue()
@@ -531,23 +538,53 @@ def run_gui_mode():
             self.lbl_reboot = ttk.Label(mem_frame, text="⚠ Reboot Required", foreground="orange")
             # hidden by default
 
+
             # Bottom Row: Removed Quick Access
 
             # Right: Actions & Stats
 
 
             # Right: Actions & Stats
+            # 2x2 Grid Layout
+            # Row 0: QA Buttons (L) | Action Buttons (R)
+            # Row 1: Status Text (L) | Uptime Text (R)
+            
             c_col3 = ttk.Frame(controls_frame)
             c_col3.pack(side=tk.RIGHT, fill=tk.Y)
             
-            self.btn_start = ttk.Button(c_col3, text="START SERVER", command=self.start_server, width=20)
-            self.btn_start.pack(pady=2)
-            
-            self.btn_stop = ttk.Button(c_col3, text="STOP SERVER", command=self.stop_server, state=tk.DISABLED, width=20)
-            self.btn_stop.pack(pady=2)
+            # Helper to open folder
+            def open_dir(path):
+                try:
+                    p = os.path.abspath(path)
+                    if not os.path.exists(p): os.makedirs(p)
+                    os.startfile(p) if IS_WINDOWS else subprocess.run(["xdg-open", p])
+                except Exception as e:
+                    messagebox.showerror("Error", f"Could not open directory: {e}")
 
-            self.lbl_stats = ttk.Label(c_col3, textvariable=self.stats_var, font=("Consolas", 9))
-            self.lbl_stats.pack(pady=5)
+            # Top Row Frames
+            qa_buttons_frame = ttk.Frame(c_col3)
+            qa_buttons_frame.grid(row=0, column=0, sticky="n", padx=(0, 10), pady=2)
+            
+            action_buttons_frame = ttk.Frame(c_col3)
+            action_buttons_frame.grid(row=0, column=1, sticky="n", pady=2)
+
+            # Quick Access Buttons (Vertical)
+            ttk.Button(qa_buttons_frame, text="Server", width=10, command=lambda: open_dir(".")).pack(fill=tk.X, pady=1)
+            ttk.Button(qa_buttons_frame, text="Worlds", width=10, command=lambda: open_dir(WORLD_DIR)).pack(fill=tk.X, pady=1)
+            ttk.Button(qa_buttons_frame, text="Backups", width=10, command=lambda: open_dir(BACKUP_DIR)).pack(fill=tk.X, pady=1)
+
+            # Action Buttons (Vertical)
+            self.btn_start = ttk.Button(action_buttons_frame, text="START SERVER", command=self.start_server, width=20)
+            self.btn_start.pack(pady=1)
+            self.btn_stop = ttk.Button(action_buttons_frame, text="STOP SERVER", command=self.stop_server, state=tk.DISABLED, width=20)
+            self.btn_stop.pack(pady=1)
+
+            # Bottom Row Labels
+            self.lbl_status = ttk.Label(c_col3, textvariable=self.status_var, font=("Consolas", 9))
+            self.lbl_status.grid(row=1, column=0, pady=5)
+            
+            self.lbl_uptime = ttk.Label(c_col3, textvariable=self.uptime_var, font=("Consolas", 9))
+            self.lbl_uptime.grid(row=1, column=1, pady=5)
             
             # 3. Console
             self.console = scrolledtext.ScrolledText(self.root, font=("Consolas", -10), state=tk.DISABLED)
@@ -615,11 +652,12 @@ def run_gui_mode():
             if state == "Stopped":
                  self.root.after(0, lambda: self.btn_start.config(state=tk.NORMAL))
                  self.root.after(0, lambda: self.btn_stop.config(state=tk.DISABLED))
-                 self.root.after(0, lambda: self.stats_var.set("Status: Stopped"))
+                 self.root.after(0, lambda: self.status_var.set("Status: Stopped"))
+                 self.root.after(0, lambda: self.uptime_var.set("Uptime: 00:00:00"))
             elif state == "Running":
                  uptime = status.get("uptime", "00:00:00")
-                 text = f"Status: Running | Uptime: {uptime}"
-                 self.root.after(0, lambda: self.stats_var.set(text))
+                 self.root.after(0, lambda: self.status_var.set("Status: Running"))
+                 self.root.after(0, lambda: self.uptime_var.set(f"Uptime: {uptime}"))
 
         def log_queue_wrapper(self, msg, tag=None):
             timestamp = datetime.datetime.now().strftime("[%H:%M:%S]")
