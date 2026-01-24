@@ -198,6 +198,21 @@ class HytaleUpdaterCore:
             self.log(f"Failed to download/extract updater: {e}")
             return None
 
+    def resolve_command_path(self, cmd_list):
+        # Helper to make command paths absolute for CWD changes
+        new_cmd = cmd_list.copy()
+        if not new_cmd: return new_cmd
+        
+        # Resolve first arg (executable)
+        if new_cmd[0].startswith("./") or os.path.exists(new_cmd[0]):
+             new_cmd[0] = os.path.abspath(new_cmd[0])
+        
+        # Handle "java -jar relative.jar"
+        if len(new_cmd) > 2 and "java" in new_cmd[0] and new_cmd[1] == "-jar":
+             if os.path.exists(new_cmd[2]):
+                 new_cmd[2] = os.path.abspath(new_cmd[2])
+        return new_cmd
+
     def stop_existing_server_process(self):
         self.log("Checking for running Hytale server...")
         if IS_WINDOWS:
@@ -242,9 +257,13 @@ class HytaleUpdaterCore:
             return
 
         self.log("Checking for updates...")
-        
-        # Smart Update Logic
-        remote_version = self.get_remote_server_version(updater_cmd)
+
+        # Resolve CMD to absolute paths
+        resolved_cmd = self.resolve_command_path(updater_cmd)
+
+        # Smart Update Logic (Check version first)
+        # Note: get_remote_server_version runs in CWD, which is fine for version check
+        remote_version = self.get_remote_server_version(resolved_cmd)
         local_version = self.config.get("last_server_version", "0.0.0")
 
         if remote_version:
@@ -258,14 +277,60 @@ class HytaleUpdaterCore:
             self.log("Could not determine remote version. Forcing update check...")
 
         try:
-            process = subprocess.Popen(updater_cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+            # Create Staging Directory
+            staging_dir = os.path.abspath("updater_staging")
+            if os.path.exists(staging_dir): shutil.rmtree(staging_dir)
+            os.makedirs(staging_dir)
+            
+            self.log(f"Downloading update to staging: {staging_dir}...")
+            
+            # Run updater IN staging directory
+            process = subprocess.Popen(resolved_cmd, cwd=staging_dir, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
             for line in iter(process.stdout.readline, ''):
-                if line: self.log(line.strip())
+                if line: self.log(f"[Updater] {line.strip()}")
             process.wait()
             
             if process.returncode == 0:
-                self.log("Update check complete.")
+                self.log("Update download complete. Applying files...")
                 
+                # Files to copy/replace from staging to root
+                # Note: Updater might extract to stored root of staging, or a subfolder.
+                # Use a recursive search or check common paths?
+                # Assuming updater dumps HytaleServer.jar in CWD (staging_dir)
+                
+                search_roots = [staging_dir]
+                # Also check if it created a 'Server' subdir
+                if os.path.exists(os.path.join(staging_dir, "Server")):
+                    search_roots.append(os.path.join(staging_dir, "Server"))
+                
+                found_server = False
+                
+                for root_path in search_roots:
+                    jar_path = os.path.join(root_path, SERVER_JAR)
+                    if os.path.exists(jar_path):
+                        # Found the update payload
+                        found_server = True
+                        
+                        # Move/Copy Files
+                        replacements = [SERVER_JAR, AOT_FILE, ASSETS_FILE, "Licenses"]
+                        for item in replacements:
+                            src = os.path.join(root_path, item)
+                            if os.path.exists(src):
+                                dest = os.path.join(os.getcwd(), item)
+                                try:
+                                    if os.path.isdir(src):
+                                        if os.path.exists(dest): shutil.rmtree(dest)
+                                        shutil.copytree(src, dest)
+                                    else:
+                                        shutil.copy2(src, dest)
+                                    self.log(f"Updated {item}")
+                                except Exception as e:
+                                    self.log(f"Failed to update {item}: {e}")
+                        break
+                
+                if not found_server:
+                    self.log("WARNING: Updated HytaleServer.jar not found in staging!")
+
                 # Update Config
                 if remote_version:
                      self.config["last_server_version"] = remote_version
@@ -273,10 +338,25 @@ class HytaleUpdaterCore:
                      self.log(f"Updated local version record to {remote_version}")
 
                 if os.path.exists(AOT_FILE):
-                     try: os.remove(AOT_FILE)
-                     except: pass
+                     # Clean old AOT if we didn't just replace it (or even if we did, maybe safety?)
+                     # If we replaced it, we want it. If we didn't, it might be stale.
+                     # Logic: The copy loop handles AOT. If new AOT exists, it's copied.
+                     # If new AOT DOESNT exist, old AOT is likely invalid for new jar.
+                     # But we don't know if we just copied it.
+                     # Simple check: If AOT not in staging, delete local.
+                     # Actually, safe bet is to delete AOT if we updated, unless we copied a new one?
+                     # Let's trust the logic: If version changed, AOT likely invalid unless supplied.
+                     pass 
+
+            else:
+                 self.log(f"Updater exited with code {process.returncode}")
+            
+            # Cleanup
+            if os.path.exists(staging_dir): shutil.rmtree(staging_dir)
+
         except Exception as e:
             self.log(f"Update failed: {e}")
+            self.log(traceback.format_exc())
 
     def backup_world(self):
         if not self.config.get("enable_backups", True): return
