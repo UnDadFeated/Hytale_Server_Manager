@@ -789,11 +789,6 @@ def run_gui_mode():
         def send_command_ui(self):
             cmd = self.input_var.get().strip()
             if cmd:
-                # Strip leading slash if present, as console commands generally don't need it
-                # and it might be causing double-slash issues or parsing weirdness
-                if cmd.startswith("/"):
-                    cmd = cmd[1:]
-                    
                 self.core.send_command(cmd)
                 self.input_var.set("")
                 self.entry_cmd.focus()
