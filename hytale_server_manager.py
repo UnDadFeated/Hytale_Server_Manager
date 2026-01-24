@@ -45,7 +45,6 @@ def load_config():
         "restart_interval": 12,
         "server_memory": "8G",
         "max_backups": 3,
-        "prevent_updates": False,
         "manager_auto_update": True
     }
     if os.path.exists(CONFIG_FILE):
@@ -338,10 +337,6 @@ except Exception as e:
         """Handles the server update process using the Hytale downloader."""
         updater_cmd = self.ensure_updater()
         
-        if self.config.get("prevent_updates", False):
-            self.log("Auto-updates are DISABLED in config. Skipping update check.")
-            return
-
         if not updater_cmd:
             self.log("Cannot run update, updater not available.")
             return
@@ -509,8 +504,8 @@ except Exception as e:
 
         self.stop_existing_server_process()
 
+        self.check_self_update()
         if self.config.get("check_updates", True):
-            self.check_self_update()
             self.update_server()
 
         self.backup_world()
@@ -677,8 +672,6 @@ def run_gui_mode():
             
             self.var_memory.trace_add("write", self.on_config_change)
 
-            self.var_prevent_updates = tk.BooleanVar(value=self.config.get("prevent_updates", False))
-
             self.status_var = tk.StringVar(value="Status: Stopped")
             self.uptime_var = tk.StringVar(value="Uptime: 00:00:00")
 
@@ -715,15 +708,14 @@ def run_gui_mode():
             c_col1.pack(side=tk.LEFT, fill=tk.Y, padx=(0, 20))
             
             ttk.Checkbutton(c_col1, text="Enable File Logging", variable=self.var_logging, command=self.save).pack(anchor="w")
-            ttk.Checkbutton(c_col1, text="Check Updates on Start", variable=self.var_check_upd, command=self.save).pack(anchor="w")
+            ttk.Checkbutton(c_col1, text="Check for new server updates at start", variable=self.var_check_upd, command=self.save).pack(anchor="w")
+            ttk.Label(c_col1, text="(Uncheck if modded)", font=("Segoe UI", 8), foreground="gray").pack(anchor="w", padx=(20, 0))
             ttk.Checkbutton(c_col1, text="Auto-Start Server", variable=self.var_autostart, command=self.save).pack(anchor="w")
             ttk.Checkbutton(c_col1, text="Auto-Restart on Crash", variable=self.var_restart, command=self.save).pack(anchor="w")
             
             c_col2 = ttk.Frame(options_row)
             c_col2.pack(side=tk.LEFT, fill=tk.Y, padx=(0, 20))
             
-            ttk.Checkbutton(c_col2, text="Prevent Auto-Update (Modded)", variable=self.var_prevent_updates, command=self.save).pack(anchor="w", pady=(0, 5))
-
             bkp_frame = ttk.Frame(c_col2)
             bkp_frame.pack(anchor="w")
             ttk.Checkbutton(bkp_frame, text="Backup World on Start", variable=self.var_backup, command=self.save).pack(side=tk.LEFT)
@@ -852,7 +844,6 @@ def run_gui_mode():
                 "server_memory": self.var_memory.get(),
                 "server_memory": self.var_memory.get(),
                 "max_backups": int(self.var_max_backups.get()) if self.var_max_backups.get().isdigit() else 3,
-                "prevent_updates": self.var_prevent_updates.get(),
                 "manager_auto_update": self.var_mgr_update.get()
             })
             self.core.config = self.config
@@ -963,7 +954,6 @@ def print_help():
     print("  - dark_mode           : (GUI) Enable dark theme. [true/false]")
     print("  - enable_logging      : Write logs to hytale_server_manager.log. [true/false]")
     print("  - check_updates       : Check for updates on startup. [true/false]")
-    print("  - prevent_updates     : PREVENT updates even if available (for Modded servers). [true/false]")
     print("  - auto_start          : Automatically start the server when this script runs. [true/false]")
     print("  - enable_backups      : Zip the world folder before starting. [true/false]")
     print("  - max_backups         : Number of backups to keep. [Integer]")
