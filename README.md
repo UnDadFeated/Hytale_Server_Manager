@@ -55,6 +55,7 @@ Settings are saved to `hytale_server_manager_config.json`. Key features:
 ```json
 {
   "enable_backups": true,
+  "max_backups": 3,
   "enable_discord": true,
   "discord_webhook": "YOUR_WEBHOOK_URL",
   "enable_auto_restart": true,
@@ -65,5 +66,5 @@ Settings are saved to `hytale_server_manager_config.json`. Key features:
 
 ## Versioning
 
-Current Version: 1.9.3
+Current Version: 1.9.4
 See `version.py` for the tracked version number.

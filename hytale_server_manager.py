@@ -47,8 +47,10 @@ def load_config():
         "discord_webhook": "",
         "enable_auto_restart": True,
         "enable_schedule": False,
+        "enable_schedule": False,
         "restart_interval": 12, # Hours
-        "server_memory": "8G"
+        "server_memory": "8G",
+        "max_backups": 3
     }
     if os.path.exists(CONFIG_FILE):
         try:
@@ -140,17 +142,44 @@ class HytaleUpdaterCore:
         if os.path.exists("hytale-downloader.jar"):
             return ["java", "-jar", "hytale-downloader.jar"]
 
-        self.log(f"Downloading updater from {UPDATER_ZIP_URL}...")
-        try:
-            req = urllib.request.Request(UPDATER_ZIP_URL, headers={'User-Agent': 'Mozilla/5.0'})
-            with urllib.request.urlopen(req) as response:
-                with open(UPDATER_ZIP_FILE, "wb") as f:
-                    f.write(response.read())
+        self.log(f"Updater not found or checking for cache. Target: {UPDATER_ZIP_FILE}")
+        
+        # Smart Download (Check Checksum/Size if zip exists)
+        should_download = True
+        if os.path.exists(UPDATER_ZIP_FILE):
+             try:
+                 self.log(f"Found cached {UPDATER_ZIP_FILE}, checking remote size...")
+                 req = urllib.request.Request(UPDATER_ZIP_URL, method='HEAD', headers={'User-Agent': 'Mozilla/5.0'})
+                 with urllib.request.urlopen(req) as response:
+                     remote_size = int(response.headers.get('Content-Length', 0))
+                     local_size = os.path.getsize(UPDATER_ZIP_FILE)
+                     
+                     if remote_size > 0 and remote_size == local_size:
+                         self.log("Local zip matches remote size. Skipping download.")
+                         should_download = False
+                     else:
+                         self.log(f"Size mismatch (Local: {local_size}, Remote: {remote_size}). Redownloading...")
+             except Exception as e:
+                 self.log(f"Error checking remote size: {e}. forcing download.")
 
+        if should_download:
+            self.log(f"Downloading updater from {UPDATER_ZIP_URL}...")
+            try:
+                req = urllib.request.Request(UPDATER_ZIP_URL, headers={'User-Agent': 'Mozilla/5.0'})
+                with urllib.request.urlopen(req) as response:
+                    with open(UPDATER_ZIP_FILE, "wb") as f:
+                        f.write(response.read())
+            except Exception as e:
+                 self.log(f"Download failed: {e}")
+                 return None
+
+        try:
             with zipfile.ZipFile(UPDATER_ZIP_FILE, 'r') as zip_ref:
                 zip_ref.extractall(".")
             
-            if os.path.exists(UPDATER_ZIP_FILE): os.remove(UPDATER_ZIP_FILE)
+            # Don't delete zip anymore to allow caching
+            # if os.path.exists(UPDATER_ZIP_FILE): os.remove(UPDATER_ZIP_FILE) 
+
             
             if os.path.exists(UPDATER_EXECUTABLE):
                 if not IS_WINDOWS: os.chmod(UPDATER_EXECUTABLE, 0o755)
@@ -266,9 +295,10 @@ class HytaleUpdaterCore:
             shutil.make_archive(backup_name, 'zip', WORLD_DIR)
             self.log(f"Backup created: {backup_name}.zip")
             # Cleanup
+            max_b = int(self.config.get("max_backups", 3))
             backups = sorted([f for f in os.listdir(BACKUP_DIR) if f.startswith("world_backup_") and f.endswith(".zip")])
-            if len(backups) > 5:
-                for old in backups[:-5]:
+            if len(backups) > max_b:
+                for old in backups[:-max_b]:
                     try: os.remove(os.path.join(BACKUP_DIR, old))
                     except: pass
         except Exception as e:
@@ -463,6 +493,7 @@ def run_gui_mode():
             self.var_discord_url = tk.StringVar(value=self.config.get("discord_webhook", ""))
             self.var_schedule_time = tk.StringVar(value=str(self.config.get("restart_interval", 12)))
             self.var_memory = tk.StringVar(value=self.config.get("server_memory", "8G"))
+            self.var_max_backups = tk.StringVar(value=str(self.config.get("max_backups", 3)))
             
             
             
@@ -513,13 +544,20 @@ def run_gui_mode():
             ttk.Checkbutton(c_col1, text="Enable File Logging", variable=self.var_logging, command=self.save).pack(anchor="w")
             ttk.Checkbutton(c_col1, text="Check Updates on Start", variable=self.var_check_upd, command=self.save).pack(anchor="w")
             ttk.Checkbutton(c_col1, text="Auto-Start Server", variable=self.var_autostart, command=self.save).pack(anchor="w")
-            ttk.Checkbutton(c_col1, text="Backup World on Start", variable=self.var_backup, command=self.save).pack(anchor="w")
+            # Swapped: Moved Auto-Restart Here
+            ttk.Checkbutton(c_col1, text="Auto-Restart on Crash", variable=self.var_restart, command=self.save).pack(anchor="w")
             
             # Middle: Advanced
             c_col2 = ttk.Frame(options_row)
             c_col2.pack(side=tk.LEFT, fill=tk.Y, padx=(0, 20))
 
-            ttk.Checkbutton(c_col2, text="Auto-Restart on Crash", variable=self.var_restart, command=self.save).pack(anchor="w")
+            # Swapped: Moved Backup Here with Max Field
+            bkp_frame = ttk.Frame(c_col2)
+            bkp_frame.pack(anchor="w")
+            ttk.Checkbutton(bkp_frame, text="Backup World on Start", variable=self.var_backup, command=self.save).pack(side=tk.LEFT)
+            ttk.Label(bkp_frame, text="Max:").pack(side=tk.LEFT, padx=(5,2))
+            ttk.Entry(bkp_frame, textvariable=self.var_max_backups, width=3).pack(side=tk.LEFT)
+            
             
             dsc_frame = ttk.Frame(c_col2)
             dsc_frame.pack(anchor="w", pady=2)
@@ -640,7 +678,10 @@ def run_gui_mode():
                 "enable_schedule": self.var_schedule.get(),
                 "discord_webhook": self.var_discord_url.get(),
                 "restart_interval": self.var_schedule_time.get(),
-                "server_memory": self.var_memory.get()
+                "discord_webhook": self.var_discord_url.get(),
+                "restart_interval": self.var_schedule_time.get(),
+                "server_memory": self.var_memory.get(),
+                "max_backups": int(self.var_max_backups.get()) if self.var_max_backups.get().isdigit() else 3
             })
             # Also update core config in realtime
             self.core.config = self.config
