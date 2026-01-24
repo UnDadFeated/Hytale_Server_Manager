@@ -385,11 +385,13 @@ class HytaleUpdaterCore:
 
     def send_command(self, command):
         if self.server_process and self.server_process.poll() is None:
-            try:
                 self.log(f"> {command}")
-                # Using CRLF (\r\n) with binary pipes for Windows console compatibility.
-                # LF (\n) alone resulted in commands showing Usage output (incomplete input?).
-                msg = (command + "\r\n").encode('utf-8')
+                # Using LF (\n) again, but with debug logging enabled to verify.
+                msg = (command + "\n").encode('utf-8')
+                
+                # Debug: log hex to verify what we are sending
+                self.log(f"[Debug] Sending bytes: {msg.hex()}")
+                
                 self.server_process.stdin.write(msg)
                 self.server_process.stdin.flush()
             except Exception as e:
