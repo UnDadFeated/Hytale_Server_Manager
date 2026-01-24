@@ -173,9 +173,20 @@ class HytaleUpdaterCore:
                  self.log(f"Download failed: {e}")
                  return None
 
+        # Extract
         try:
             with zipfile.ZipFile(UPDATER_ZIP_FILE, 'r') as zip_ref:
                 zip_ref.extractall(".")
+            
+            # Cleanup Zip immediately after extraction? 
+            # The existing code didn't delete it to allow caching.
+            # User request: "delete the new server zip that is downloaded"
+            # We can delete it here if we don't want caching, OR we delete it at the end of update_server if we want it to persist for this run but not forever.
+            # Let's delete it here to keep it clean as requested.
+            if os.path.exists(UPDATER_ZIP_FILE): 
+                try: os.remove(UPDATER_ZIP_FILE)
+                except: pass
+
             
             # Don't delete zip anymore to allow caching
             # if os.path.exists(UPDATER_ZIP_FILE): os.remove(UPDATER_ZIP_FILE) 
@@ -352,11 +363,28 @@ class HytaleUpdaterCore:
                  self.log(f"Updater exited with code {process.returncode}")
             
             # Cleanup
-            if os.path.exists(staging_dir): shutil.rmtree(staging_dir)
+            if os.path.exists(staging_dir): 
+                 try: shutil.rmtree(staging_dir)
+                 except: pass
 
         except Exception as e:
             self.log(f"Update failed: {e}")
             self.log(traceback.format_exc())
+            # Ensure cleanup on fail
+            if os.path.exists(staging_dir): 
+                 try: shutil.rmtree(staging_dir)
+                 except: pass
+
+    def send_command(self, command):
+        if self.server_process and self.server_process.poll() is None:
+            try:
+                self.log(f"> {command}")
+                self.server_process.stdin.write(command + "\n")
+                self.server_process.stdin.flush()
+            except Exception as e:
+                self.log(f"Failed to send command: {e}")
+        else:
+             self.log("Server is not running.")
 
     def backup_world(self):
         if not self.config.get("enable_backups", True): return
@@ -706,8 +734,20 @@ def run_gui_mode():
             
             # 3. Console
             self.console = scrolledtext.ScrolledText(self.root, font=("Consolas", -10), state=tk.DISABLED)
-            self.console.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
+            self.console.pack(fill=tk.BOTH, expand=True, padx=10, pady=(5, 0))
             self.setup_tags()
+
+            # 3.5 Input
+            input_frame = ttk.Frame(self.root, padding=(10, 5))
+            input_frame.pack(fill=tk.X)
+            
+            self.input_var = tk.StringVar()
+            self.entry_cmd = ttk.Entry(input_frame, textvariable=self.input_var)
+            self.entry_cmd.pack(side=tk.LEFT, fill=tk.X, expand=True)
+            self.entry_cmd.bind("<Return>", lambda e: self.send_command_ui())
+            
+            btn_send = ttk.Button(input_frame, text="Send", command=self.send_command_ui)
+            btn_send.pack(side=tk.LEFT, padx=(5, 0))
             
             # 4. Footer (Donation)
             footer = ttk.Frame(self.root, padding="10")
@@ -725,6 +765,14 @@ def run_gui_mode():
             pp_url = "https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=jscheema@gmail.com&item_name=Hytale%20Server%20Updater&amount=5.00&currency_code=USD"
             btn_pp = ttk.Button(donate_frame, text="PayPal ($5)", command=lambda: webbrowser.open(pp_url))
             btn_pp.pack(side=tk.LEFT, padx=2)
+
+        def send_command_ui(self):
+            cmd = self.input_var.get().strip()
+            if cmd:
+                self.core.send_command(cmd)
+                self.input_var.set("")
+                # Keep focus
+                self.entry_cmd.focus()
 
 
         def on_config_change(self, *args):
