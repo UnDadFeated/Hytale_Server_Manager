@@ -387,8 +387,11 @@ class HytaleUpdaterCore:
         if self.server_process and self.server_process.poll() is None:
             try:
                 self.log(f"> {command}")
-                self.server_process.stdin.write(command + "\n")
-                self.server_process.stdin.flush()
+                # Write bytes directly to avoid OS-specific line ending translation (CRLF)
+                # which seems to confuse the server's parser
+                msg = (command + "\n").encode('utf-8')
+                self.server_process.stdin.buffer.write(msg)
+                self.server_process.stdin.buffer.flush()
             except Exception as e:
                 self.log(f"Failed to send command: {e}")
         else:
