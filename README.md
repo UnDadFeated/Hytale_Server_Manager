@@ -6,7 +6,7 @@ A Python automation script for managing Dedicated Hytale Servers.
 
 *   **GUI & Console Modes**: Use the modern graphical interface or headless console mode (`-nogui`) for flexible management.
 *   **Robustness**: Automated crash detection, scheduled restarts, and world backups (zips locally before starting).
-*   **Smart Updates**: Checks the remote server version before installing to prevent unnecessary downloads.
+*   **Reliable Auto-Updates**: Checks `git master` via HTTP to automatically download and install updates using a safe installer script.
 *   **Performance**: Detects and enables Ahead-Of-Time (`HytaleServer.aot`) cache for faster startups.
 *   **Notifications**: Integrated Discord Webhooks for server status changes (Start, Stop, Crash).
 *   **Platform Checks**: auto-detects Java 25 and `Assets.zip` requirements.
@@ -60,11 +60,12 @@ Settings are saved to `hytale_server_manager_config.json`. Key features:
   "discord_webhook": "YOUR_WEBHOOK_URL",
   "enable_auto_restart": true,
   "enable_schedule": false,
-  "restart_interval": 12 
+  "restart_interval": 12,
+  "manager_auto_update": true
 }
 ```
 
 ## Versioning
 
-Current Version: 2.1
+Current Version: 2.4
 See `version.py` for the tracked version number.
