@@ -385,6 +385,7 @@ class HytaleUpdaterCore:
 
     def send_command(self, command):
         if self.server_process and self.server_process.poll() is None:
+            try:
                 self.log(f"> {command}")
                 # Reverting to LF (\n) as CRLF didn't help. 
                 # Stripping leading / in UI callback might help if server confuses it.
@@ -458,6 +459,12 @@ class HytaleUpdaterCore:
         self.send_discord_webhook("🟢 Hytale Server Starting...")
 
         memory = self.config.get("server_memory", "4G")
+        
+        # Prepare Environment with Memory Settings
+        # We need to define env first!
+        env = os.environ.copy()
+        env["_JAVA_OPTIONS"] = f"-Xmx{memory}"
+        
         cmd = ["java", f"-Xmx{memory}"]
         if os.path.exists(AOT_FILE):
              self.log(f"Using AOT Cache: {AOT_FILE}")
@@ -469,7 +476,7 @@ class HytaleUpdaterCore:
             creationflags = subprocess.CREATE_NEW_PROCESS_GROUP if IS_WINDOWS else 0
             
             self.server_process = subprocess.Popen(
-                cmd,
+                cmd, env=env,
                 stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE,
                 startupinfo=startupinfo, creationflags=creationflags
             )
@@ -541,7 +548,7 @@ class HytaleUpdaterCore:
         if self.server_process:
             self.log("Stopping server...")
             try:
-                self.server_process.stdin.write("stop\n")
+                self.server_process.stdin.write(b"stop\n")
                 self.server_process.stdin.flush()
             except:
                 # Force kill if needed
