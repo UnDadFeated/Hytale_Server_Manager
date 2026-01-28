@@ -289,7 +289,6 @@ class HytaleUpdaterCore:
 
     def run_update_installer(self):
         """Generates and runs the separate installer script."""
-        installer_code = f'''
 import os
 import time
 import sys
@@ -298,16 +297,29 @@ import subprocess
 pid = {os.getpid()}
 print(f"Waiting for parent process {{pid}} to close...")
 
+def is_pid_running(p):
+    try:
+        if os.name == 'nt':
+            # tasklist returns filter info if process not found or PID if found
+            output = subprocess.check_output(f'tasklist /FI "PID eq {{p}}"', shell=True).decode()
+            return str(p) in output
+        else:
+            os.kill(p, 0)
+            return True
+    except:
+        return False
+
 try:
-    while True:
-        try:
-            os.kill(pid, 0)
-            time.sleep(1)
-        except OSError:
+    # Wait for up to 30 seconds for parent to exit
+    start_wait = time.time()
+    while is_pid_running(pid):
+        if time.time() - start_wait > 30:
+            print("Timed out waiting for parent to close. Forcing update...")
             break
+        time.sleep(1)
             
     print("Updating files...")
-    time.sleep(1) # Extra buffer
+    time.sleep(2) # Extra buffer
     
     if os.path.exists("version.py.new"):
         if os.path.exists("version.py"): os.remove("version.py")
@@ -325,7 +337,7 @@ try:
 except Exception as e:
     print(f"Update failed: {{e}}")
     input("Press Enter to exit...")
-'''
+
         with open("updater_installer.py", "w") as f:
             f.write(installer_code)
             
