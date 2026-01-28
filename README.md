@@ -2,6 +2,8 @@
 
 A Python automation script for managing Dedicated Hytale Servers.
 
+![Hytale Server Manager Screenshot](screenshot.png)
+
 ## Features
 
 *   **GUI & Console Modes**: Use the modern graphical interface or headless console mode (`-nogui`) for flexible management.
