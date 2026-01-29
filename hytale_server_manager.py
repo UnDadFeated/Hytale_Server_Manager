@@ -345,7 +345,7 @@ except Exception as e:
             
         self.log("Launching installer and exiting...")
         subprocess.Popen([sys.executable, "updater_installer.py"])
-        sys.exit(0)
+        os._exit(0)
 
     def update_server(self):
         """Handles the server update process using the Hytale downloader."""
