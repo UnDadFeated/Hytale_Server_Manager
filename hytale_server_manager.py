@@ -463,16 +463,48 @@ except Exception as e:
         source_bases = []
 
         if specific_zip:
-            self.log(f"Extracting {os.path.basename(specific_zip)}...")
+            # SMART VERIFICATION: Peek inside zip before extracting
             try:
+                self.log(f"Verifying integrity with {os.path.basename(specific_zip)}...")
                 with zipfile.ZipFile(specific_zip, 'r') as zip_ref:
+                    # Check 1: Assets.zip
+                    assets_needs_update = False
+                    try:
+                        assets_info = zip_ref.getinfo("Assets.zip")
+                        local_assets = os.path.join(os.getcwd(), "Assets.zip")
+                        if not os.path.exists(local_assets) or os.path.getsize(local_assets) != assets_info.file_size:
+                            assets_needs_update = True
+                    except KeyError:
+                        pass # Assets.zip not in this zip (unlikely for server zip)
+
+                    # Check 2: Server Jar (Scanning for it since it might be in a subdir)
+                    server_needs_update = False
+                    jar_info = None
+                    for zinfo in zip_ref.infolist():
+                        if zinfo.filename.endswith("HytaleServer.jar"):
+                            jar_info = zinfo
+                            break
+                    
+                    if jar_info:
+                        local_jar = os.path.join(os.getcwd(), "HytaleServer.jar")
+                        if not os.path.exists(local_jar) or os.path.getsize(local_jar) != jar_info.file_size:
+                            server_needs_update = True
+                    else:
+                        server_needs_update = True # Jar not found in zip? Suspicious, force extract.
+
+                    if not assets_needs_update and not server_needs_update:
+                        self.log("Files up to date (Verified against cached zip). Skipping extraction.")
+                        return True
+                    
+                    self.log("Integrity mismatch detected. Extracting update...")
                     zip_ref.extractall(extracted_root)
+                
                 files_ready_to_copy = True
                 source_bases.append(extracted_root)
                 if os.path.exists(os.path.join(extracted_root, "Server")):
                         source_bases.append(os.path.join(extracted_root, "Server"))
             except Exception as e:
-                self.log(f"Failed to extract zip: {e}")
+                self.log(f"Failed to verify/extract zip: {e}")
                 return False
         else:
             # Check for ANY zip if specific one not provided
