@@ -62,7 +62,7 @@ def validate_config(config):
 def load_config():
     """Loads the server configuration from the JSON file."""
     default_config = {
-        "last_server_version": "0.0.0",
+        "last_server_version": "3.3.0",
         "dark_mode": True,
         "enable_logging": True,
         "check_updates": True,
@@ -940,6 +940,74 @@ except Exception as e:
         self.restart_timer.start()
 
 
+def install_service():
+    """Installs the manager as a systemd service (Linux only)."""
+    if IS_WINDOWS:
+        print("Service installation is only supported on Linux.")
+        return
+
+    if os.geteuid() != 0:
+        print("Error: This command must be run as root (sudo).")
+        return
+
+    service_path = "/etc/systemd/system/hytale-manager.service"
+    script_path = os.path.abspath(__file__)
+    working_dir = os.path.dirname(script_path)
+    user = os.environ.get('SUDO_USER', 'root')
+
+    content = f"""[Unit]
+Description=Hytale Server Manager
+After=network.target
+
+[Service]
+Type=simple
+User={user}
+WorkingDirectory={working_dir}
+ExecStart={sys.executable} {script_path} -nogui
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+"""
+    try:
+        with open(service_path, "w") as f:
+            f.write(content)
+        
+        print(f"Service file created at {service_path}")
+        subprocess.run(["systemctl", "daemon-reload"])
+        subprocess.run(["systemctl", "enable", "hytale-manager"])
+        print("Service enabled! Start it with: sudo systemctl start hytale-manager")
+    except Exception as e:
+        print(f"Failed to install service: {e}")
+
+def enable_autostart():
+    """Enables auto-start for the current user (Linux Desktop)."""
+    if IS_WINDOWS:
+        print("Auto-start setup via CLI is currently Linux-only. On Windows, use the GUI option or Task Scheduler.")
+        return
+
+    autostart_dir = os.path.expanduser("~/.config/autostart")
+    if not os.path.exists(autostart_dir):
+        os.makedirs(autostart_dir)
+
+    desktop_file = os.path.join(autostart_dir, "hytale-manager.desktop")
+    script_path = os.path.abspath(__file__)
+    working_dir = os.path.dirname(script_path)
+
+    content = f"""[Desktop Entry]
+Type=Application
+Name=Hytale Server Manager
+Exec={sys.executable} {script_path}
+Path={working_dir}
+Terminal=false
+"""
+    try:
+        with open(desktop_file, "w") as f:
+            f.write(content)
+        print(f"Auto-start entry created at {desktop_file}")
+    except Exception as e:
+        print(f"Failed to enable auto-start: {e}")
+
 def run_console_mode():
     """Runs the updater in console-only mode."""
     def console_logger(message, tag=None):
@@ -1272,6 +1340,21 @@ def run_gui_mode():
             self.apply_theme()
             self.save()
 
+            
+            # Bind close event
+            self.root.protocol("WM_DELETE_WINDOW", self.on_close)
+
+        def on_close(self):
+            """Handles the window close event."""
+            if self.core.server_process:
+                if messagebox.askokcancel("Quit", "Server is running. Do you want to stop it and quit?"):
+                    self.core.stop_server()
+                    self.root.destroy()
+                    sys.exit(0)
+            else:
+                self.root.destroy()
+                sys.exit(0)
+
     root = tk.Tk()
     app = HytaleGUI(root)
     root.mainloop()
@@ -1283,8 +1366,10 @@ def print_help():
     print("=" * 60)
     print("Usage: python hytale_server_manager.py [options]")
     print("\nCommand Line Options:")
-    print("  -nogui       : Run in console-only mode (headless). Useful for servers.")
-    print("  -help, --help: Show this help message.")
+    print("  -nogui             : Run in console-only mode (headless). Useful for servers.")
+    print("  -install-service   : (Linux) Installs systemd service for background operation.")
+    print("  -enable-autostart  : (Linux) Adds to desktop auto-start.")
+    print("  -help, --help      : Show this help message.")
     print("\nDescription:")
     print("  Manages the Hytale Dedicated Server life-cycle.")
     print("  Features: Auto-Updates, Crash Detection, Auto-Restarts, World Backups, Discord Webhooks.")
@@ -1323,12 +1408,24 @@ def main():
     if "-help" in sys.argv or "--help" in sys.argv:
         print_help()
 
+    if "-install-service" in sys.argv:
+        install_service()
+        sys.exit(0)
+
+    if "-enable-autostart" in sys.argv:
+        enable_autostart()
+        sys.exit(0)
+
     if "-nogui" in sys.argv:
         run_console_mode()
     else:
         try:
             run_gui_mode()
         except ImportError:
+            print("GUI libraries not found.")
+            if not IS_WINDOWS:
+                print("On Linux, try installing python3-tk (e.g., 'sudo apt install python3-tk').")
+            print("Falling back to console mode...")
             run_console_mode()
         except Exception:
              traceback.print_exc()

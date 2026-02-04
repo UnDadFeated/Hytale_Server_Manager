@@ -12,6 +12,7 @@ A Python automation script for managing Dedicated Hytale Servers.
 *   **Performance**: Detects and enables Ahead-Of-Time (`HytaleServer.aot`) cache for faster startups.
 *   **Notifications**: Integrated Discord Webhooks for server status changes (Start, Stop, Crash).
 *   **Background Scanning**: Automatically checks for server updates every 30 minutes and restarts if found.
+*   **Linux Integration**: Native systemd service support and desktop auto-start capabilities.
 *   **Platform Checks**: auto-detects Java 25 and `Assets.zip` requirements.
 
 ## Requirements
@@ -46,6 +47,19 @@ python hytale_server_manager.py -nogui
 ```
 *   Configuration is loaded from `hytale_server_manager_config.json`.
 
+### Linux Extras
+
+**Install as Service** (Runs in background, auto-restarts on crash/reboot):
+```bash
+sudo python3 hytale_server_manager.py -install-service
+sudo systemctl start hytale-manager
+```
+
+**Enable Desktop Auto-Start**:
+```bash
+python3 hytale_server_manager.py -enable-autostart
+```
+
 ### Help
 View all command line arguments:
 ```bash
@@ -70,5 +84,5 @@ Settings are saved to `hytale_server_manager_config.json`. Key features:
 
 ## Versioning
 
-Current Version: 3.2.8
+Current Version: 3.3.0
 See `version.py` for the tracked version number.
