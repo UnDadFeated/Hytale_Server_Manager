@@ -1086,7 +1086,7 @@ def run_gui_mode():
             header = ttk.Frame(self.root, padding="5")
             header.pack(fill=tk.X)
             
-            title = ttk.Label(header, text=f"Hytale Server Manager v{version.__version__}", font=("Segoe UI", 16, "bold"))
+            title = ttk.Label(header, text=f"Hytale Server Manager v{__version__}", font=("Segoe UI", 16, "bold"))
             title.pack(side=tk.LEFT)
             
             desc = ttk.Label(header, text=" | Comprehensive Server Management Tool", font=("Segoe UI", 10))
