@@ -52,7 +52,7 @@ Run with the `-nogui` argument for CLI-only operation:
 python hsm.py -nogui
 ```
 
-* Configuration is loaded from `hytale_server_manager_config.json`.
+* Configuration is loaded from `hsm.conf`.
 
 ### Linux Extras
 
@@ -79,7 +79,7 @@ python hsm.py -help
 
 ## Configuration
 
-Settings are saved to `hytale_server_manager_config.json`. Key features:
+Settings are saved to `hsm.conf`. Key features:
 
 ```json
 {
@@ -96,4 +96,4 @@ Settings are saved to `hytale_server_manager_config.json`. Key features:
 
 ## Versioning
 
-Current Version: 3.3.3
+Current Version: 3.3.4

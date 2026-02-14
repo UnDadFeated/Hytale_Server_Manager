@@ -16,7 +16,7 @@ import traceback
 import webbrowser
 
 
-__version__ = "3.3.3"
+__version__ = "3.3.4"
 
 
 
@@ -28,8 +28,8 @@ IS_WINDOWS = platform.system() == "Windows"
 UPDATER_EXECUTABLE = "hytale-downloader.exe" if IS_WINDOWS else "hytale-downloader"
 ASSETS_FILE = "Assets.zip"
 AOT_FILE = "HytaleServer.aot"
-LOG_FILE = "hytale_server_manager.log"
-CONFIG_FILE = "hytale_server_manager_config.json"
+LOG_FILE = "hsm.log"
+CONFIG_FILE = "hsm.conf"
 BACKUP_DIR = "universe/backups"
 WORLD_DIR = "universe/worlds"
 
@@ -74,7 +74,7 @@ def validate_config(config):
 def load_config():
     """Loads the server configuration from the JSON file."""
     default_config = {
-        "last_server_version": "3.3.3",
+        "last_server_version": "3.3.4",
         "dark_mode": True,
         "enable_logging": True,
         "check_updates": True,
@@ -1424,7 +1424,7 @@ def print_help():
     print("\n  The configuration is a JSON file with the following options:")
     print("  - last_server_version : Tracks the installed server version.")
     print("  - dark_mode           : (GUI) Enable dark theme. [true/false]")
-    print("  - enable_logging      : Write logs to hytale_server_manager.log. [true/false]")
+    print("  - enable_logging      : Write logs to hsm.log. [true/false]")
     print("  - check_updates       : Check for updates on startup. [true/false]")
     print("  - auto_start          : Automatically start the server when this script runs. [true/false]")
     print("  - enable_backups      : Zip the world folder before starting. [true/false]")
