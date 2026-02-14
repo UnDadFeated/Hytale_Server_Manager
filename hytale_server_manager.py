@@ -14,7 +14,9 @@ import signal
 import json
 import traceback
 import webbrowser
-import version
+
+__version__ = "3.3.1"
+
 
 JAVA_VERSION_REQ = 25
 SERVER_JAR = "HytaleServer.jar"
@@ -62,7 +64,7 @@ def validate_config(config):
 def load_config():
     """Loads the server configuration from the JSON file."""
     default_config = {
-        "last_server_version": "3.3.0",
+        "last_server_version": "3.3.1",
         "dark_mode": True,
         "enable_logging": True,
         "check_updates": True,
@@ -366,25 +368,25 @@ class HytaleUpdaterCore:
 
         # Add cache buster
         ts = int(time.time())
-        VERSION_URL = f"https://raw.githubusercontent.com/UnDadFeated/Hytale_Server_Manager/master/version.py?t={ts}"
+        # We now check hytale_server_manager.py directly for the version
         MANAGER_URL = f"https://raw.githubusercontent.com/UnDadFeated/Hytale_Server_Manager/master/hytale_server_manager.py?t={ts}"
         
         try:
-            req = urllib.request.Request(VERSION_URL, headers={'User-Agent': 'HytaleManagerUpdater'})
+            req = urllib.request.Request(MANAGER_URL, headers={'User-Agent': 'HytaleManagerUpdater'})
             with urllib.request.urlopen(req) as response:
-                remote_version_content = response.read().decode('utf-8')
+                remote_content = response.read().decode('utf-8')
             
             remote_version = None
-            for line in remote_version_content.splitlines():
-                if line.startswith("__version__"):
-                    remote_version = line.split('"')[1]
-                    break
+            # Regex to find __version__ = "x.y.z"
+            match = re.search(r'__version__\s*=\s*"([^"]+)"', remote_content)
+            if match:
+                remote_version = match.group(1)
             
             if not remote_version:
                 self.log("Could not parse remote version.")
                 return
 
-            local_version = version.__version__
+            local_version = __version__
             
             # Semantic version comparison
             def parse_ver(v): return [int(x) for x in v.split('.')]
@@ -392,16 +394,11 @@ class HytaleUpdaterCore:
             if parse_ver(remote_version) > parse_ver(local_version):
                 self.log(f"New manager version found ({remote_version}). Downloading...")
                 
-                # Download files
-                req_ver = urllib.request.Request(VERSION_URL, headers={'User-Agent': 'HytaleManagerUpdater'})
-                with urllib.request.urlopen(req_ver) as response:
-                    with open("version.py.new", "wb") as f: f.write(response.read())
-                    
-                req_mgr = urllib.request.Request(MANAGER_URL, headers={'User-Agent': 'HytaleManagerUpdater'})
-                with urllib.request.urlopen(req_mgr) as response:
-                    with open("hytale_server_manager.py.new", "wb") as f: f.write(response.read())
+                # Save the already downloaded content
+                with open("hytale_server_manager.py.new", "w", encoding='utf-8') as f:
+                    f.write(remote_content)
                 
-                self.log("Files downloaded. Preparing installer...")
+                self.log("File downloaded. Preparing installer...")
                 self.run_update_installer()
             else:
                 self.log("Manager is up to date.")
@@ -444,11 +441,14 @@ try:
     print("Updating files...")
     time.sleep(2) # Extra buffer
     
-    if os.path.exists("version.py.new"):
-        if os.path.exists("version.py"): os.remove("version.py")
-        os.rename("version.py.new", "version.py")
-        print("Updated version.py")
-        
+    # Check for legacy version.py and remove it if it exists
+    if os.path.exists("version.py"):
+        try:
+            os.remove("version.py")
+            print("Removed legacy version.py")
+        except Exception as e:
+            print(f"Failed to remove version.py: {e}")
+
     if os.path.exists("hytale_server_manager.py.new"):
         if os.path.exists("hytale_server_manager.py"): os.remove("hytale_server_manager.py")
         os.rename("hytale_server_manager.py.new", "hytale_server_manager.py")
@@ -1362,7 +1362,7 @@ def run_gui_mode():
 def print_help():
     """Prints the help message."""
     abs_config_path = os.path.abspath(CONFIG_FILE)
-    print(f"Hytale Server Manager v{version.__version__}")
+    print(f"Hytale Server Manager v{__version__}")
     print("=" * 60)
     print("Usage: python hytale_server_manager.py [options]")
     print("\nCommand Line Options:")
