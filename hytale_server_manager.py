@@ -1045,7 +1045,7 @@ def run_gui_mode():
         """Tkinter-based GUI for the Hytale Server Manager."""
         def __init__(self, root):
             self.root = root
-            self.root.title(f"Hytale Server Manager v{version.__version__}")
+            self.root.title(f"Hytale Server Manager v{__version__}")
             
             self.root.geometry("1000x800")
             self.root.state("normal")
