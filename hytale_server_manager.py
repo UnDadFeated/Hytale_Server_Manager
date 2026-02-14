@@ -15,7 +15,9 @@ import json
 import traceback
 import webbrowser
 
-__version__ = "3.3.1"
+
+__version__ = "3.3.2"
+
 
 
 JAVA_VERSION_REQ = 25
@@ -45,8 +47,16 @@ except ImportError:
     HAS_DISCORD = False
 
 def validate_config(config):
-    """Validates the configuration values."""
-    # Memory check (e.g., 4G, 4096M)
+    """
+    Validates and corrects configuration values to prevent runtime errors.
+    
+    Args:
+        config (dict): The configuration dictionary to validate.
+        
+    Returns:
+        dict: The validated configuration dictionary.
+    """
+    # Validate server_memory format (e.g., 4G, 4096M)
     mem = config.get("server_memory", "4G")
     if not re.match(r"^\d+[GM]$", mem):
         print(f"WARNING: Invalid server_memory format '{mem}'. Reverting to 4G.")
@@ -64,7 +74,7 @@ def validate_config(config):
 def load_config():
     """Loads the server configuration from the JSON file."""
     default_config = {
-        "last_server_version": "3.3.1",
+        "last_server_version": "3.3.2",
         "dark_mode": True,
         "enable_logging": True,
         "check_updates": True,
@@ -100,7 +110,12 @@ def save_config(config):
         print(f"Error saving config: {e}")
 
 class HytaleUpdaterCore:
-    """Core logic for managing, updating, and monitoring the Hytale server."""
+    """
+    Core logic controller for the Hytale Server Manager.
+    
+    Handles server process management, updates, backups, discord integration, 
+    and background monitoring tasks.
+    """
     
     def __init__(self, log_callback, input_callback=None, config=None, status_callback=None):
         self.log_callback = log_callback
@@ -120,6 +135,13 @@ class HytaleUpdaterCore:
              self.start_discord_bot()
 
     def log(self, message, tag=None):
+        """
+        Logs a message to the registered callback and optional rich console.
+        
+        Args:
+            message (str): The message to log.
+            tag (str, optional): A tag for categorization (e.g., 'stderr', 'error').
+        """
         # Fallback to standard logging callback
         self.log_callback(message, tag)
         
@@ -362,7 +384,13 @@ class HytaleUpdaterCore:
             return None
 
     def check_self_update(self):
-        """Checks for updates to the manager script from git master branch via HTTP."""
+        """
+        Checks the remote master branch for a newer version of this script.
+        
+        It compares the local __version__ with the __version__ string found in 
+        the remote hytale_server_manager.py file. If a newer version is found,
+        it downloads the new script and launches a separate installer process.
+        """
         if not self.config.get("manager_auto_update", True):
              return
 
@@ -407,7 +435,12 @@ class HytaleUpdaterCore:
             self.log(f"Failed to check/update manager: {e}")
 
     def run_update_installer(self):
-        """Generates and runs the separate installer script."""
+        """
+        Creates and executes a temporary python script to handle the self-update process.
+        
+        The installer waits for this process to exit, replaces the script files,
+        and then restarts the manager.
+        """
         installer_code = f'''
 import os
 import time
@@ -1011,6 +1044,13 @@ Terminal=false
 def run_console_mode():
     """Runs the updater in console-only mode."""
     def console_logger(message, tag=None):
+        """
+        Callback for logging messages in console mode.
+        
+        Args:
+            message (str): The log message.
+            tag (str, optional): The log tag (e.g., 'stderr').
+        """
         # Core log handles rich output if available. 
         # This callback is primarily for file logging and fallback print.
         timestamp = datetime.datetime.now().strftime("[%Y-%m-%d %H:%M:%S]")
@@ -1042,7 +1082,12 @@ def run_gui_mode():
     from tkinter import scrolledtext, messagebox, ttk, filedialog
 
     class HytaleGUI:
-        """Tkinter-based GUI for the Hytale Server Manager."""
+        """
+        Graphical User Interface for the Hytale Server Manager using Tkinter.
+        
+        Provides a user-friendly dashboard for controlling the server, editing configuration,
+        and viewing live console logs.
+        """
         def __init__(self, root):
             self.root = root
             self.root.title(f"Hytale Server Manager v{__version__}")

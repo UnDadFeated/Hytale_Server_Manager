@@ -96,4 +96,4 @@ Settings are saved to `hytale_server_manager_config.json`. Key features:
 
 ## Versioning
 
-Current Version: 3.3.1
+Current Version: 3.3.2
