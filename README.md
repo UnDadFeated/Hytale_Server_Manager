@@ -27,7 +27,7 @@ A Python automation script for managing Dedicated Hytale Servers.
 
 ## Installation
 
-1. Clone this repository or download `hytale_server_manager.py`.
+1. Clone this repository or download `hsm.py`.
 2. Place the scripts in your desired server folder.
 
 ## Usage
@@ -37,7 +37,7 @@ A Python automation script for managing Dedicated Hytale Servers.
 Run the script without arguments to open the GUI:
 
 ```bash
-python hytale_server_manager.py
+python hsm.py
 ```
 
 * **Controls**: Toggle Backups, Discord Webhooks, and Auto-Restart directly from the UI.
@@ -49,7 +49,7 @@ python hytale_server_manager.py
 Run with the `-nogui` argument for CLI-only operation:
 
 ```bash
-python hytale_server_manager.py -nogui
+python hsm.py -nogui
 ```
 
 * Configuration is loaded from `hytale_server_manager_config.json`.
@@ -59,14 +59,14 @@ python hytale_server_manager.py -nogui
 **Install as Service** (Runs in background, auto-restarts on crash/reboot):
 
 ```bash
-sudo python3 hytale_server_manager.py -install-service
+sudo python3 hsm.py -install-service
 sudo systemctl start hytale-manager
 ```
 
 **Enable Desktop Auto-Start**:
 
 ```bash
-python3 hytale_server_manager.py -enable-autostart
+python3 hsm.py -enable-autostart
 ```
 
 ### Help
@@ -74,7 +74,7 @@ python3 hytale_server_manager.py -enable-autostart
 View all command line arguments:
 
 ```bash
-python hytale_server_manager.py -help
+python hsm.py -help
 ```
 
 ## Configuration
@@ -96,4 +96,4 @@ Settings are saved to `hytale_server_manager_config.json`. Key features:
 
 ## Versioning
 
-Current Version: 3.3.2
+Current Version: 3.3.3

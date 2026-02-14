@@ -16,7 +16,7 @@ import traceback
 import webbrowser
 
 
-__version__ = "3.3.2"
+__version__ = "3.3.3"
 
 
 
@@ -74,7 +74,7 @@ def validate_config(config):
 def load_config():
     """Loads the server configuration from the JSON file."""
     default_config = {
-        "last_server_version": "3.3.2",
+        "last_server_version": "3.3.3",
         "dark_mode": True,
         "enable_logging": True,
         "check_updates": True,
@@ -397,7 +397,7 @@ class HytaleUpdaterCore:
         # Add cache buster
         ts = int(time.time())
         # We now check hytale_server_manager.py directly for the version
-        MANAGER_URL = f"https://raw.githubusercontent.com/UnDadFeated/Hytale_Server_Manager/master/hytale_server_manager.py?t={ts}"
+        MANAGER_URL = f"https://raw.githubusercontent.com/UnDadFeated/Hytale_Server_Manager/master/hsm.py?t={ts}"
         
         try:
             req = urllib.request.Request(MANAGER_URL, headers={'User-Agent': 'HytaleManagerUpdater'})
@@ -423,7 +423,7 @@ class HytaleUpdaterCore:
                 self.log(f"New manager version found ({remote_version}). Downloading...")
                 
                 # Save the already downloaded content
-                with open("hytale_server_manager.py.new", "w", encoding='utf-8') as f:
+                with open("hsm.py.new", "w", encoding='utf-8') as f:
                     f.write(remote_content)
                 
                 self.log("File downloaded. Preparing installer...")
@@ -482,13 +482,13 @@ try:
         except Exception as e:
             print(f"Failed to remove version.py: {e}")
 
-    if os.path.exists("hytale_server_manager.py.new"):
-        if os.path.exists("hytale_server_manager.py"): os.remove("hytale_server_manager.py")
-        os.rename("hytale_server_manager.py.new", "hytale_server_manager.py")
-        print("Updated hytale_server_manager.py")
+    if os.path.exists("hsm.py.new"):
+        if os.path.exists("hsm.py"): os.remove("hsm.py")
+        os.rename("hsm.py.new", "hsm.py")
+        print("Updated hsm.py")
         
     print("Files updated. Restarting manager...")
-    subprocess.Popen([sys.executable, "hytale_server_manager.py"])
+    subprocess.Popen([sys.executable, "hsm.py"])
     
 except Exception as e:
     print(f"Update failed: {{e}}")
@@ -1409,7 +1409,7 @@ def print_help():
     abs_config_path = os.path.abspath(CONFIG_FILE)
     print(f"Hytale Server Manager v{__version__}")
     print("=" * 60)
-    print("Usage: python hytale_server_manager.py [options]")
+    print("Usage: python hsm.py [options]")
     print("\nCommand Line Options:")
     print("  -nogui             : Run in console-only mode (headless). Useful for servers.")
     print("  -install-service   : (Linux) Installs systemd service for background operation.")
@@ -1445,7 +1445,7 @@ def main():
         try: os.remove("updater_installer.py")
         except: pass
         
-    for f in ["version.py.new", "hytale_server_manager.py.new"]:
+    for f in ["version.py.new", "hsm.py.new"]:
          if os.path.exists(f):
              try: os.remove(f)
              except: pass
