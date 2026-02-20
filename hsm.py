@@ -16,7 +16,7 @@ import traceback
 import webbrowser
 
 
-__version__ = "3.3.4"
+__version__ = "3.3.5"
 
 
 
@@ -57,10 +57,12 @@ def validate_config(config):
         dict: The validated configuration dictionary.
     """
     # Validate server_memory format (e.g., 4G, 4096M)
-    mem = config.get("server_memory", "4G")
-    if not re.match(r"^\d+[GM]$", mem):
-        print(f"WARNING: Invalid server_memory format '{mem}'. Reverting to 4G.")
-        config["server_memory"] = "4G"
+    mem = str(config.get("server_memory", "8G"))
+    if not re.match(r"(?i)^\d+[GM]$", mem):
+        print(f"WARNING: Invalid server_memory format '{mem}'. Reverting to 8G.")
+        config["server_memory"] = "8G"
+    else:
+        config["server_memory"] = mem.upper()
 
     # Interval check
     try:
@@ -167,7 +169,10 @@ class HytaleUpdaterCore:
         # Define Bot Class inline to access manager instance
         class HytaleBot(commands.Bot):
             def __init__(self, manager_core):
-                super().__init__(command_prefix="!", intents=discord.Intents.default())
+                intents = discord.Intents.default()
+                if hasattr(intents, "message_content"):
+                    intents.message_content = True
+                super().__init__(command_prefix="!", intents=intents)
                 self.manager = manager_core
             
             async def on_ready(self):
@@ -246,10 +251,8 @@ class HytaleUpdaterCore:
         
         if self.input_callback:
             user_path = self.input_callback(f"Please enter the full path to {ASSETS_FILE}: ")
-            if hasattr(user_path, 'get'):
-                pass 
 
-            if user_path and os.path.exists(user_path) and os.path.basename(user_path) == ASSETS_FILE:
+            if user_path and isinstance(user_path, str) and os.path.exists(user_path) and os.path.basename(user_path) == ASSETS_FILE:
                  try:
                      shutil.copy(user_path, cwd)
                      self.log(f"Copied {ASSETS_FILE} to server directory.")
@@ -441,6 +444,7 @@ class HytaleUpdaterCore:
         The installer waits for this process to exit, replaces the script files,
         and then restarts the manager.
         """
+        args_repr = repr(sys.argv)
         installer_code = f'''
 import os
 import time
@@ -488,7 +492,7 @@ try:
         print("Updated hsm.py")
         
     print("Files updated. Restarting manager...")
-    subprocess.Popen([sys.executable, "hsm.py"])
+    subprocess.Popen([sys.executable] + {args_repr})
     
 except Exception as e:
     print(f"Update failed: {{e}}")
@@ -1127,6 +1131,9 @@ def run_gui_mode():
             if self.var_autostart.get():
                 self.root.after(1000, self.start_server)
 
+            # Bind close event
+            self.root.protocol("WM_DELETE_WINDOW", self.on_close)
+
         def setup_ui(self):
             header = ttk.Frame(self.root, padding="5")
             header.pack(fill=tk.X)
@@ -1384,10 +1391,6 @@ def run_gui_mode():
             self.config["dark_mode"] = self.is_dark
             self.apply_theme()
             self.save()
-
-            
-            # Bind close event
-            self.root.protocol("WM_DELETE_WINDOW", self.on_close)
 
         def on_close(self):
             """Handles the window close event."""
