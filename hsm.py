@@ -16,7 +16,7 @@ import traceback
 import webbrowser
 
 
-__version__ = "3.3.5"
+__version__ = "3.3.6"
 
 
 
@@ -430,12 +430,14 @@ class HytaleUpdaterCore:
                     f.write(remote_content)
                 
                 self.log("File downloaded. Preparing installer...")
-                self.run_update_installer()
+                return True
             else:
                 self.log("Manager is up to date.")
+                return False
 
         except Exception as e:
             self.log(f"Failed to check/update manager: {e}")
+            return False
 
     def run_update_installer(self):
         """
@@ -786,7 +788,9 @@ except Exception as e:
         self.stop_requested = False
         
         # 1. Manager Update Check
-        self.check_self_update()
+        if self.check_self_update():
+            self.run_update_installer()
+            return
 
         # 2. Java Check
         if not self.check_java_version(): return
@@ -912,6 +916,19 @@ except Exception as e:
     def _run_background_update_check(self):
         """Checks for updates in the background and restarts if found."""
         try:
+            if self.check_self_update():
+                self.log("[Background Check] New manager version found! Restarting application to apply...")
+                self.send_discord_webhook("🔄 New Manager Update found! Restarting application...")
+                self.stop_server()
+                
+                def delayed_installer():
+                    while self.server_process and self.server_process.poll() is None:
+                        time.sleep(1)
+                    self.run_update_installer()
+                
+                threading.Thread(target=delayed_installer, daemon=True).start()
+                return
+
             updater_cmd = self.ensure_updater()
             if not updater_cmd: return
 
