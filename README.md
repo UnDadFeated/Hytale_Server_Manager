@@ -111,4 +111,4 @@ Changes made to the server logic are primarily driven by the `hsm.conf` JSON fla
 
 ## Versioning
 
-Current Version: 3.3.6
+Current Version: 3.3.7

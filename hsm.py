@@ -16,7 +16,7 @@ import traceback
 import webbrowser
 
 
-__version__ = "3.3.6"
+__version__ = "3.3.7"
 
 
 
@@ -486,7 +486,7 @@ try:
             os.remove("version.py")
             print("Removed legacy version.py")
         except Exception as e:
-            print(f"Failed to remove version.py: {e}")
+            print(f"Failed to remove version.py: {{e}}")
 
     if os.path.exists("hsm.py.new"):
         if os.path.exists("hsm.py"): os.remove("hsm.py")
