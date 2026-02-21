@@ -16,7 +16,9 @@ import traceback
 import webbrowser
 
 
-__version__ = "3.3.7"
+
+__version__ = "3.3.8"
+
 
 
 
@@ -379,7 +381,8 @@ class HytaleUpdaterCore:
         """Queries the updater for the latest remote server version."""
         try:
             cmd = updater_cmd + ["-print-version"]
-            result = subprocess.run(cmd, capture_output=True, text=True)
+            # Add timeout to avoid freezing if the updater requires OAuth authentication
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
             if result.returncode == 0:
                 return result.stdout.strip()
             return None
@@ -669,11 +672,21 @@ except Exception as e:
                 self.log(f"Running updater in: {staging_dir}...")
                 
                 # Run the downloader CLI
-                process = subprocess.Popen(resolved_cmd, cwd=staging_dir, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
-                for line in iter(process.stdout.readline, ''):
-                    if line: self.log(f"[Updater] {line.strip()}")
-                process.wait()
+                # We use stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize=1, universal_newlines=True
+                # to read line by line efficiently and print it.
+                process = subprocess.Popen(
+                    resolved_cmd, cwd=staging_dir, 
+                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT, 
+                    bufsize=1, universal_newlines=True
+                )
                 
+                # Iterate over the output line by line as it is produced
+                for line in process.stdout:
+                    if line: 
+                        self.log(f"[Updater] {line.strip()}")
+                
+                process.wait()
+
                 if process.returncode == 0:
                     self.log("Updater finished. Installing files...")
                     if self._install_from_zip_or_folder(staging_dir):
