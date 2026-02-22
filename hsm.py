@@ -18,7 +18,7 @@ import contextlib
 
 
 
-__version__ = "3.4.4"
+__version__ = "3.5.0"
 
 
 
@@ -1209,79 +1209,45 @@ def run_gui_mode():
             desc = ttk.Label(header, text=" | Comprehensive Server Management Tool", font=("Segoe UI", 10))
             desc.pack(side=tk.LEFT, padx=10, pady=(4,0))
             
-            controls_frame = ttk.LabelFrame(self.root, text="Controls & Configuration", padding="5")
-            controls_frame.pack(fill=tk.X, padx=10, pady=2)
+            notebook = ttk.Notebook(self.root)
+            notebook.pack(fill=tk.X, padx=10, pady=5)
             
-            left_container = ttk.Frame(controls_frame)
-            left_container.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-
-            options_row = ttk.Frame(left_container)
-            options_row.pack(fill=tk.X, anchor="w")
-
-            c_col1 = ttk.Frame(options_row)
-            c_col1.pack(side=tk.LEFT, fill=tk.Y, padx=(0, 20))
+            # --- TAB 1: DASHBOARD ---
+            tab_dash = ttk.Frame(notebook, padding=10)
+            notebook.add(tab_dash, text="Dashboard")
             
-            ttk.Checkbutton(c_col1, text="Enable File Logging", variable=self.var_logging, command=self.save).pack(anchor="w")
-            ttk.Checkbutton(c_col1, text="Auto-Start Server", variable=self.var_autostart, command=self.save).pack(anchor="w")
-            ttk.Checkbutton(c_col1, text="Auto-Restart on Crash", variable=self.var_restart, command=self.save).pack(anchor="w")
-
-            mem_frame = ttk.Frame(c_col1)
-            mem_frame.pack(anchor="w", pady=2)
-            ttk.Label(mem_frame, text="Server RAM:").pack(side=tk.LEFT)
-            ttk.Entry(mem_frame, textvariable=self.var_memory, width=5).pack(side=tk.LEFT, padx=5)
-            self.lbl_reboot = ttk.Label(mem_frame, text="⚠ Reboot Required", foreground="orange")
+            dash_left = ttk.Frame(tab_dash)
+            dash_left.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
             
-            aot_frame = ttk.Frame(c_col1)
-            aot_frame.pack(anchor="w", fill=tk.X, pady=2)
-            ttk.Label(aot_frame, text="AOT:").pack(side=tk.LEFT)
-            ttk.Entry(aot_frame, textvariable=self.var_aot, width=10).pack(side=tk.LEFT, padx=5)
+            dash_right = ttk.Frame(tab_dash)
+            dash_right.pack(side=tk.RIGHT, fill=tk.Y, padx=(20, 0))
             
-            def browse_aot():
-                path = filedialog.askopenfilename(filetypes=[("AOT Files", "*.aot"), ("All Files", "*.*")])
-                if path:
-                     self.var_aot.set(path)
-                     self.save()
-                     
-            ttk.Button(aot_frame, text="Browse", width=8, command=browse_aot).pack(side=tk.LEFT)
+            # Action Buttons Area (Left)
+            action_frame = ttk.Frame(dash_left)
+            action_frame.pack(anchor="nw")
             
-            c_col2 = ttk.Frame(options_row)
-            c_col2.pack(side=tk.LEFT, fill=tk.Y, padx=(0, 20))
+            # Making Start/Stop buttons visually distinct
+            self.btn_start = ttk.Button(action_frame, text="START SERVER", command=self.start_server, width=25, style="StartPulse.TButton")
+            self.btn_start.pack(side=tk.LEFT, padx=(0, 5))
             
-            ttk.Checkbutton(c_col2, text="Check for new server updates", variable=self.var_check_upd, command=self.save).pack(anchor="w")
-            ttk.Label(c_col2, text="(Uncheck if modded)", font=("Segoe UI", 8), foreground="gray").pack(anchor="w", padx=(20, 0))
+            self.btn_stop = ttk.Button(action_frame, text="STOP SERVER", command=self.stop_server, state=tk.DISABLED, width=25, style="StopAlert.TButton")
+            self.btn_stop.pack(side=tk.LEFT, padx=(0, 5))
             
-            bkp_frame = ttk.Frame(c_col2)
-            bkp_frame.pack(anchor="w")
-            ttk.Checkbutton(bkp_frame, text="Backup World on Start", variable=self.var_backup, command=self.save).pack(side=tk.LEFT)
-            ttk.Label(bkp_frame, text="Max:").pack(side=tk.LEFT, padx=(5,2))
-            ttk.Entry(bkp_frame, textvariable=self.var_max_backups, width=3).pack(side=tk.LEFT)
-
-            sch_frame = ttk.Frame(c_col2)
-            sch_frame.pack(anchor="w", pady=2)
-            ttk.Checkbutton(sch_frame, text="Schedule Restart (Hrs)", variable=self.var_schedule, command=self.save).pack(side=tk.LEFT)
-            ttk.Entry(sch_frame, textvariable=self.var_schedule_time, width=5).pack(side=tk.LEFT, padx=5)
-
-            c_col3_center = ttk.Frame(options_row)
-            c_col3_center.pack(side=tk.LEFT, fill=tk.Y, padx=(0, 10))
-
-            dsc_frame = ttk.Frame(c_col3_center, padding=5, borderwidth=1, relief="solid")
-            dsc_frame.pack(anchor="w", pady=2, fill=tk.X)
-
-            ttk.Checkbutton(dsc_frame, text="Discord Integration", variable=self.var_discord, command=self.save).pack(anchor="w", pady=(0, 5))
-
-            def add_dsc_row(label_text, var, is_secure=False):
-                row = ttk.Frame(dsc_frame)
-                row.pack(fill=tk.X, pady=1)
-                ttk.Label(row, text=label_text, width=10).pack(side=tk.LEFT)
-                entry = ttk.Entry(row, textvariable=var, width=10, show="*" if is_secure else None)
-                entry.pack(side=tk.LEFT, fill=tk.X, expand=True)
-
-            add_dsc_row("Webhook:", self.var_discord_url)
-            add_dsc_row("Token:", self.var_discord_token, is_secure=True)
-            add_dsc_row("Channel:", self.var_discord_channel)
-
-            c_col3 = ttk.Frame(controls_frame)
-            c_col3.pack(side=tk.RIGHT, fill=tk.Y)
+            self.lbl_reboot = ttk.Label(action_frame, text="⚠ Reboot Required", foreground="orange")
+            
+            status_frame = ttk.Frame(dash_left)
+            status_frame.pack(anchor="nw", pady=(10, 0))
+            
+            self.lbl_status = ttk.Label(status_frame, textvariable=self.status_var, font=("Cascadia Code", 10, "bold"))
+            self.lbl_status.pack(side=tk.LEFT, padx=(0, 20))
+            
+            self.lbl_uptime = ttk.Label(status_frame, textvariable=self.uptime_var, font=("Cascadia Code", 10))
+            self.lbl_uptime.pack(side=tk.LEFT, padx=(0, 20))
+            
+            ttk.Label(status_frame, text=f"Version: {self.config.get('last_server_version', 'Unknown')}", font=("Cascadia Code", 9), foreground="gray").pack(side=tk.LEFT)
+            
+            # Quick Folders (Right Dashboard panel)
+            ttk.Label(dash_right, text="Quick Access", font=("Segoe UI", 9, "bold")).pack(anchor="ne", pady=(0, 5))
             
             def open_dir(path):
                 try:
@@ -1290,44 +1256,97 @@ def run_gui_mode():
                     os.startfile(p) if IS_WINDOWS else subprocess.run(["xdg-open", p])
                 except Exception as e:
                     messagebox.showerror("Error", f"Could not open directory: {e}")
+                    
+            ttk.Button(dash_right, text="Server Folder", width=15, command=lambda: open_dir(".")).pack(fill=tk.X, pady=2)
+            ttk.Button(dash_right, text="Worlds Folder", width=15, command=lambda: open_dir(WORLD_DIR)).pack(fill=tk.X, pady=2)
+            ttk.Button(dash_right, text="Backups Folder", width=15, command=lambda: open_dir(BACKUP_DIR)).pack(fill=tk.X, pady=2)
 
-            qa_buttons_frame = ttk.Frame(c_col3)
-            qa_buttons_frame.grid(row=0, column=0, sticky="n", padx=(0, 10), pady=0)
+            # --- TAB 2: CONFIGURATION ---
+            tab_config = ttk.Frame(notebook, padding=10)
+            notebook.add(tab_config, text="Server Configuration")
             
-            action_buttons_frame = ttk.Frame(c_col3)
-            action_buttons_frame.grid(row=0, column=1, sticky="n", pady=0)
+            conf_col1 = ttk.Frame(tab_config)
+            conf_col1.pack(side=tk.LEFT, fill=tk.Y, padx=(0, 40))
+            
+            conf_col2 = ttk.Frame(tab_config)
+            conf_col2.pack(side=tk.LEFT, fill=tk.Y)
+            
+            # Col 1: Performance
+            ttk.Label(conf_col1, text="System Settings", font=("Segoe UI", 9, "bold")).pack(anchor="w", pady=(0, 5))
+            
+            mem_frame = ttk.Frame(conf_col1)
+            mem_frame.pack(anchor="w", pady=2)
+            ttk.Label(mem_frame, text="Server RAM (e.g. 4G):", width=18).pack(side=tk.LEFT)
+            ttk.Entry(mem_frame, textvariable=self.var_memory, width=8).pack(side=tk.LEFT)
+            
+            aot_frame = ttk.Frame(conf_col1)
+            aot_frame.pack(anchor="w", pady=2)
+            ttk.Label(aot_frame, text="Custom AOT Path:", width=18).pack(side=tk.LEFT)
+            ttk.Entry(aot_frame, textvariable=self.var_aot, width=15).pack(side=tk.LEFT, padx=(0, 5))
+            def browse_aot():
+                path = filedialog.askopenfilename(filetypes=[("AOT Files", "*.aot"), ("All Files", "*.*")])
+                if path:
+                     self.var_aot.set(path)
+                     self.save()
+            ttk.Button(aot_frame, text="Browse...", command=browse_aot).pack(side=tk.LEFT)
+            
+            ttk.Checkbutton(conf_col1, text="Check for Server Updates on Boot", variable=self.var_check_upd, command=self.save).pack(anchor="w", pady=(5, 0))
+            ttk.Label(conf_col1, text="  (Uncheck this if you are running modded files)", font=("Segoe UI", 8), foreground="gray").pack(anchor="w")
+            
+            # Col 2: Automation
+            ttk.Label(conf_col2, text="Automation & Backups", font=("Segoe UI", 9, "bold")).pack(anchor="w", pady=(0, 5))
+            
+            ttk.Checkbutton(conf_col2, text="Auto-Start Server when Manager Opens", variable=self.var_autostart, command=self.save).pack(anchor="w", pady=1)
+            ttk.Checkbutton(conf_col2, text="Auto-Restart Server on Crash", variable=self.var_restart, command=self.save).pack(anchor="w", pady=1)
+            ttk.Checkbutton(conf_col2, text="Enable File Logging (hsm.log)", variable=self.var_logging, command=self.save).pack(anchor="w", pady=1)
+            
+            bkp_frame = ttk.Frame(conf_col2)
+            bkp_frame.pack(anchor="w", pady=3)
+            ttk.Checkbutton(bkp_frame, text="Backup World on Start", variable=self.var_backup, command=self.save).pack(side=tk.LEFT)
+            ttk.Label(bkp_frame, text=" | Max limit:").pack(side=tk.LEFT, padx=(5, 2))
+            ttk.Entry(bkp_frame, textvariable=self.var_max_backups, width=4).pack(side=tk.LEFT)
+            
+            sch_frame = ttk.Frame(conf_col2)
+            sch_frame.pack(anchor="w", pady=3)
+            ttk.Checkbutton(sch_frame, text="Schedule Auto-Restart Every:", variable=self.var_schedule, command=self.save).pack(side=tk.LEFT)
+            ttk.Entry(sch_frame, textvariable=self.var_schedule_time, width=4).pack(side=tk.LEFT, padx=(5, 2))
+            ttk.Label(sch_frame, text="Hours").pack(side=tk.LEFT)
 
-            ttk.Button(qa_buttons_frame, text="Server", width=10, command=lambda: open_dir(".")).pack(fill=tk.X, pady=1)
-            ttk.Button(qa_buttons_frame, text="Worlds", width=10, command=lambda: open_dir(WORLD_DIR)).pack(fill=tk.X, pady=1)
-            ttk.Button(qa_buttons_frame, text="Backups", width=10, command=lambda: open_dir(BACKUP_DIR)).pack(fill=tk.X, pady=1)
-
-            self.btn_start = ttk.Button(action_buttons_frame, text="START SERVER", command=self.start_server, width=20)
-            self.btn_start.pack(pady=1)
-            self.btn_stop = ttk.Button(action_buttons_frame, text="STOP SERVER", command=self.stop_server, state=tk.DISABLED, width=20)
-            self.btn_stop.pack(pady=1)
+            # --- TAB 3: DISCORD ---
+            tab_dsc = ttk.Frame(notebook, padding=10)
+            notebook.add(tab_dsc, text="Discord Bot Integration")
             
-            ttk.Label(action_buttons_frame, text=f"Version: {self.config.get('last_server_version', 'Unknown')}", font=("Consolas", 8), foreground="gray").pack(pady=(0, 2))
-
-            self.lbl_status = ttk.Label(c_col3, textvariable=self.status_var, font=("Consolas", 9))
-            self.lbl_status.grid(row=1, column=0, pady=2)
+            ttk.Checkbutton(tab_dsc, text="Enable Discord Integration", variable=self.var_discord, command=self.save).pack(anchor="w", pady=(0, 10))
             
-            self.lbl_uptime = ttk.Label(c_col3, textvariable=self.uptime_var, font=("Consolas", 9))
-            self.lbl_uptime.grid(row=1, column=1, pady=2)
+            dsc_input_area = ttk.Frame(tab_dsc)
+            dsc_input_area.pack(fill=tk.X, padx=10)
             
-            self.console = scrolledtext.ScrolledText(self.root, font=("Consolas", -10), state=tk.DISABLED)
-            self.console.pack(fill=tk.BOTH, expand=True, padx=10, pady=(2, 0))
+            def add_dsc_row(parent, label_text, var, is_secure=False):
+                row = ttk.Frame(parent)
+                row.pack(fill=tk.X, pady=3)
+                ttk.Label(row, text=label_text, width=20, font=("Segoe UI", 9, "bold")).pack(side=tk.LEFT)
+                entry = ttk.Entry(row, textvariable=var, width=40, show="*" if is_secure else None)
+                entry.pack(side=tk.LEFT)
+                
+            add_dsc_row(dsc_input_area, "Bot Token:", self.var_discord_token, is_secure=True)
+            add_dsc_row(dsc_input_area, "Channel ID:", self.var_discord_channel)
+            add_dsc_row(dsc_input_area, "Alert Webhook URL:", self.var_discord_url)
+            
+            # --- CONSOLE AREA ---
+            self.console = scrolledtext.ScrolledText(self.root, font=("Cascadia Code", 10), state=tk.DISABLED, relief="flat", borderwidth=1)
+            self.console.pack(fill=tk.BOTH, expand=True, padx=10, pady=(0, 5))
             self.setup_tags()
 
             input_frame = ttk.Frame(self.root)
-            input_frame.pack(fill=tk.X, padx=10, pady=(2, 5))
+            input_frame.pack(fill=tk.X, padx=10, pady=(0, 5))
             
-            ttk.Label(input_frame, text="Command:").pack(side=tk.LEFT, padx=(0, 5))
+            ttk.Label(input_frame, text="> Command:", font=("Cascadia Code", 10, "bold")).pack(side=tk.LEFT, padx=(0, 5))
             self.input_var = tk.StringVar()
-            self.entry_cmd = ttk.Entry(input_frame, textvariable=self.input_var)
+            self.entry_cmd = ttk.Entry(input_frame, textvariable=self.input_var, font=("Cascadia Code", 10))
             self.entry_cmd.pack(side=tk.LEFT, fill=tk.X, expand=True)
             self.entry_cmd.bind("<Return>", lambda e: self.send_command_ui())
             
-            footer = ttk.Frame(self.root, padding="10")
+            footer = ttk.Frame(self.root, padding="5 0 5 5")
             footer.pack(fill=tk.X)
             
             theme_btn = ttk.Button(footer, text="Toggle Theme", command=self.toggle_theme)
@@ -1460,22 +1479,38 @@ def run_gui_mode():
             self.console.tag_config("cyan", foreground="#55ffff" if self.is_dark else "#00aaaa")
 
         def apply_theme(self):
-            bg, fg = ("#1e1e1e", "#d4d4d4") if self.is_dark else ("#f0f0f0", "#000000")
-            txt_bg, txt_fg = bg, fg
+            try:
+                import sv_ttk
+                if self.is_dark:
+                    sv_ttk.set_theme("dark")
+                else:
+                    sv_ttk.set_theme("light")
+                bg, fg = ("#1c1c1c", "#fafafa") if self.is_dark else ("#fafafa", "#1c1c1c")
+                txt_bg = "#000000" if self.is_dark else "#f3f3f3"
+            except ImportError:
+                # Fallback purely to classic tkinter defaults
+                bg, fg = ("#1e1e1e", "#d4d4d4") if self.is_dark else ("#f0f0f0", "#000000")
+                txt_bg, txt_fg = bg, fg
+                
+                style = ttk.Style()
+                try: style.theme_use('clam')
+                except: pass
+                style.configure(".", background=bg, foreground=fg)
+                style.configure("TLabel", background=bg, foreground=fg)
+                style.configure("TFrame", background=bg)
+                style.configure("TLabelFrame", background=bg, foreground=fg)
+                style.configure("TButton", background="#3c3c3c" if self.is_dark else "#e0e0e0", foreground=fg, borderwidth=1)
+                style.map("TButton", background=[("active", "#0078d7")], foreground=[("active", "white")])
+                style.configure("TCheckbutton", background=bg, foreground=fg)
+                style.configure("TEntry", foreground="black", fieldbackground="white")
+                self.root.configure(bg=bg)
             
+            # Apply Start/Stop custom colors
             style = ttk.Style()
-            style.theme_use('clam')
-            style.configure(".", background=bg, foreground=fg)
-            style.configure("TLabel", background=bg, foreground=fg)
-            style.configure("TFrame", background=bg)
-            style.configure("TLabelFrame", background=bg, foreground=fg)
-            style.configure("TButton", background="#3c3c3c" if self.is_dark else "#e0e0e0", foreground=fg, borderwidth=1)
-            style.map("TButton", background=[("active", "#0078d7")], foreground=[("active", "white")])
-            style.configure("TCheckbutton", background=bg, foreground=fg)
-            style.configure("TEntry", foreground="black", fieldbackground="white")
+            style.configure("StartPulse.TButton", foreground="#107C10" if not self.is_dark else "#23D18B", font=("Segoe UI", 9, "bold"))
+            style.configure("StopAlert.TButton", foreground="#D13438" if not self.is_dark else "#F14C4C", font=("Segoe UI", 9, "bold"))
             
-            self.root.configure(bg=bg)
-            self.console.config(bg=txt_bg, fg=txt_fg, insertbackground=fg)
+            self.console.config(bg=txt_bg, fg=fg, insertbackground=fg)
 
         def toggle_theme(self):
             self.is_dark = not self.is_dark
