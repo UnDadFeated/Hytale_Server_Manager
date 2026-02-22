@@ -17,7 +17,7 @@ import webbrowser
 
 
 
-__version__ = "3.4.1"
+__version__ = "3.4.2"
 
 
 
@@ -1272,7 +1272,7 @@ def run_gui_mode():
                 row = ttk.Frame(dsc_frame)
                 row.pack(fill=tk.X, pady=1)
                 ttk.Label(row, text=label_text, width=10).pack(side=tk.LEFT)
-                entry = ttk.Entry(row, textvariable=var, width=18, show="*" if is_secure else None)
+                entry = ttk.Entry(row, textvariable=var, width=10, show="*" if is_secure else None)
                 entry.pack(side=tk.LEFT, fill=tk.X, expand=True)
 
             add_dsc_row("Webhook:", self.var_discord_url)
