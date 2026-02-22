@@ -15,6 +15,7 @@ import json
 import traceback
 import webbrowser
 import contextlib
+import psutil
 
 
 
@@ -1244,6 +1245,12 @@ def run_gui_mode():
             self.lbl_uptime = ttk.Label(status_frame, textvariable=self.uptime_var, font=("Cascadia Code", 10))
             self.lbl_uptime.pack(side=tk.LEFT, padx=(0, 20))
             
+            self.cpu_var = tk.StringVar(value="CPU: 0%")
+            self.ram_var = tk.StringVar(value="RAM: 0%")
+            
+            ttk.Label(status_frame, textvariable=self.cpu_var, font=("Cascadia Code", 9), foreground="gray").pack(side=tk.LEFT, padx=(0, 10))
+            ttk.Label(status_frame, textvariable=self.ram_var, font=("Cascadia Code", 9), foreground="gray").pack(side=tk.LEFT, padx=(0, 10))
+            
             ttk.Label(status_frame, text=f"Version: {self.config.get('last_server_version', 'Unknown')}", font=("Cascadia Code", 9), foreground="gray").pack(side=tk.LEFT)
             
             # Quick Folders (Right Dashboard panel)
@@ -1422,6 +1429,16 @@ def run_gui_mode():
 
         def update_stats(self, status):
             state = status.get("state", "Unknown")
+            
+            # Poll psutil metrics independently of server state
+            try:
+                cpu_load = psutil.cpu_percent(interval=None)
+                ram_load = psutil.virtual_memory().percent
+                self.root.after(0, lambda: self.cpu_var.set(f"CPU: {cpu_load}%"))
+                self.root.after(0, lambda: self.ram_var.set(f"RAM: {ram_load}%"))
+            except Exception:
+                pass
+                
             if state == "Stopped":
                  self.root.after(0, lambda: self.btn_start.config(state=tk.NORMAL))
                  self.root.after(0, lambda: self.btn_stop.config(state=tk.DISABLED))
@@ -1506,8 +1523,16 @@ def run_gui_mode():
                 style.configure("TEntry", foreground="black", fieldbackground="white")
                 self.root.configure(bg=bg)
             
-            # Apply Start/Stop custom colors
+            # TNotebook.Tab dark mode readability fix
             style = ttk.Style()
+            if self.is_dark:
+                style.configure("TNotebook.Tab", background="#333333", foreground="white", font=("Segoe UI", 9))
+                style.map("TNotebook.Tab", background=[("selected", "#1c1c1c")], foreground=[("selected", "white")])
+            else:
+                style.configure("TNotebook.Tab", foreground="black", font=("Segoe UI", 9))
+                style.map("TNotebook.Tab", foreground=[("selected", "black")])
+                
+            # Apply Start/Stop custom colors
             style.configure("StartPulse.TButton", foreground="#107C10" if not self.is_dark else "#23D18B", font=("Segoe UI", 9, "bold"))
             style.configure("StopAlert.TButton", foreground="#D13438" if not self.is_dark else "#F14C4C", font=("Segoe UI", 9, "bold"))
             

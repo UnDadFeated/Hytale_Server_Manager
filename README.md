@@ -6,7 +6,7 @@
   </p>
 
   <p>
-    <img alt="Version" src="https://img.shields.io/badge/version-3.3.7-blue.svg" />
+    <img alt="Version" src="https://img.shields.io/badge/version-3.6.0-blue.svg" />
     <img alt="Python" src="https://img.shields.io/badge/python-3.8%2B-blue.svg" />
     <img alt="Platform" src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey.svg" />
   </p>
@@ -39,12 +39,12 @@
 | **Operating System** | Windows, Linux, or macOS |
 | **Memory** | At least `4G` allocated to the server heap (`8G` recommended) |
 | **Java Environment** | **Java 25 is strictly required.** [Download from Adoptium](https://adoptium.net/temurin/releases/?version=25) |
-| **Python** | Python 3.8 or higher |
+| **Python** | Python 3.8 or higher + `psutil` module |
 
 #### OS-Specific Python Setup
 
-* **Windows:** [Download from Python.org](https://www.python.org/downloads/windows/). Ensure the installer box "Add Python to PATH" is checked.
-* **Linux:** Usually pre-installed. For the GUI to function, you may need to install the Tk UI library (`sudo apt install python3 python3-tk`).
+* **Windows:** [Download from Python.org](https://www.python.org/downloads/windows/). Ensure the installer box "Add Python to PATH" is checked. Run `pip install psutil`.
+* **Linux:** Usually pre-installed. For the GUI to function, you may need to install the Tk UI library alongside `psutil` (`sudo apt install python3 python3-tk python3-psutil`).
 
 ---
 
@@ -128,4 +128,4 @@ Changes made to the server logic are primarily driven by the `hsm.conf` JSON fla
 
 ## 🏷️ Versioning
 
-**Current Version:** `3.3.7`
+**Current Version:** `3.6.0`
