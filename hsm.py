@@ -18,7 +18,7 @@ import contextlib
 
 
 
-__version__ = "3.5.1"
+__version__ = "3.5.2"
 
 
 
@@ -1333,7 +1333,7 @@ def run_gui_mode():
             add_dsc_row(dsc_input_area, "Alert Webhook URL:", self.var_discord_url)
             
             # --- CONSOLE AREA ---
-            self.console = scrolledtext.ScrolledText(self.root, font=("Cascadia Code", 9), state=tk.DISABLED, relief="flat", borderwidth=1)
+            self.console = scrolledtext.ScrolledText(self.root, font=("Cascadia Code", 9), state=tk.DISABLED, relief="solid", borderwidth=1)
             self.console.pack(fill=tk.BOTH, expand=True, padx=10, pady=(0, 5))
             self.setup_tags()
 
@@ -1486,11 +1486,12 @@ def run_gui_mode():
                 else:
                     sv_ttk.set_theme("light")
                 bg, fg = ("#1c1c1c", "#fafafa") if self.is_dark else ("#fafafa", "#1c1c1c")
-                txt_bg = "#000000" if self.is_dark else "#f3f3f3"
+                txt_bg = "#0c0c0c"
             except ImportError:
                 # Fallback purely to classic tkinter defaults
                 bg, fg = ("#1e1e1e", "#d4d4d4") if self.is_dark else ("#f0f0f0", "#000000")
-                txt_bg, txt_fg = bg, fg
+                txt_bg = "#0c0c0c"
+                txt_fg = "#d4d4d4"
                 
                 style = ttk.Style()
                 try: style.theme_use('clam')
@@ -1510,7 +1511,7 @@ def run_gui_mode():
             style.configure("StartPulse.TButton", foreground="#107C10" if not self.is_dark else "#23D18B", font=("Segoe UI", 9, "bold"))
             style.configure("StopAlert.TButton", foreground="#D13438" if not self.is_dark else "#F14C4C", font=("Segoe UI", 9, "bold"))
             
-            self.console.config(bg=txt_bg, fg=fg, insertbackground=fg)
+            self.console.config(bg=txt_bg, fg="#d4d4d4", insertbackground="#d4d4d4")
 
         def toggle_theme(self):
             self.is_dark = not self.is_dark
