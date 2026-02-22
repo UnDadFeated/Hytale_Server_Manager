@@ -17,7 +17,7 @@ import webbrowser
 import contextlib
 import psutil
 
-__version__ = "3.7.4"
+__version__ = "3.7.5"
 
 
 
@@ -1309,8 +1309,11 @@ def run_gui_mode():
             
             self.cpu_var = tk.StringVar(value="CPU: 0%")
             self.ram_var = tk.StringVar(value="RAM: 0%")
-            ttk.Label(action_buttons_frame, textvariable=self.cpu_var, font=("Consolas", 8), foreground="gray").pack()
-            ttk.Label(action_buttons_frame, textvariable=self.ram_var, font=("Consolas", 8), foreground="gray").pack()
+            
+            stats_frame = ttk.Frame(action_buttons_frame)
+            stats_frame.pack()
+            ttk.Label(stats_frame, textvariable=self.cpu_var, font=("Consolas", 8), foreground="gray").pack(side=tk.LEFT, padx=(0, 10))
+            ttk.Label(stats_frame, textvariable=self.ram_var, font=("Consolas", 8), foreground="gray").pack(side=tk.LEFT)
 
             self.lbl_status = ttk.Label(c_col3, textvariable=self.status_var, font=("Consolas", 9, "bold"))
             self.lbl_status.grid(row=1, column=0, pady=2)
