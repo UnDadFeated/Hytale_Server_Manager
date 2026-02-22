@@ -17,7 +17,7 @@ import webbrowser
 
 
 
-__version__ = "3.3.10"
+__version__ = "3.3.11"
 
 
 
@@ -383,21 +383,26 @@ class HytaleUpdaterCore:
             cmd = updater_cmd + ["-print-version"]
             
             CREDENTIALS_FILE = ".hytale-downloader-credentials.json"
-            exe_dir = os.path.dirname(updater_cmd[0])
-            cred_path = os.path.join(exe_dir, CREDENTIALS_FILE)
-            if not os.path.exists(cred_path):
-                cred_path = CREDENTIALS_FILE
-            
-            if os.path.exists(cred_path):
-                cmd.extend(["-credentials-path", os.path.abspath(cred_path)])
+            cred_path = os.path.abspath(CREDENTIALS_FILE)
+            cmd.extend(["-credentials-path", cred_path])
 
-            # Add timeout to avoid freezing if the updater requires OAuth authentication
-            # Incremental updates or slow connections might take longer than 5 seconds
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
-            if result.returncode == 0:
-                return result.stdout.strip()
-            return None
-        except Exception:
+            try:
+                # We use a 10s timeout. If the downloader halts to prompt for an OAuth login,
+                # it will timeout. We can then gracefully catch the timeout and display the prompt.
+                result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+                if result.returncode == 0:
+                    return result.stdout.strip()
+                return None
+            except subprocess.TimeoutExpired as e:
+                if e.stdout:
+                    for line in e.stdout.splitlines():
+                        if "http" in line or "Authorization" in line or "authenticate" in line:
+                            self.log(f"[Updater Auth Required] {line.strip()}")
+                self.log("Background check timed out waiting for downloader authentication. Please restart the manager to authenticate.")
+                return None
+            
+        except Exception as e:
+            self.log(f"Version check failed: {e}")
             return None
 
     def check_self_update(self):
@@ -671,20 +676,12 @@ except Exception as e:
                          install_success = True
 
             if not install_success:
-                 # Resolve credentials path
+                 # Resolve credentials path explicitly to the root directory
                 CREDENTIALS_FILE = ".hytale-downloader-credentials.json"
-                exe_dir = os.path.dirname(resolved_cmd[0])
-                cred_path = os.path.join(exe_dir, CREDENTIALS_FILE)
-                if not os.path.exists(cred_path):
-                    cred_path = CREDENTIALS_FILE
+                cred_path = os.path.abspath(CREDENTIALS_FILE)
                 
                 run_cmd = resolved_cmd.copy()
-                if os.path.exists(cred_path):
-                    run_cmd.extend(["-credentials-path", os.path.abspath(cred_path)])
-                    try:
-                        shutil.copy2(cred_path, os.path.join(staging_dir, CREDENTIALS_FILE))
-                    except Exception:
-                        pass
+                run_cmd.extend(["-credentials-path", cred_path])
 
                 self.log(f"Running updater in: {staging_dir}...")
                 
