@@ -18,7 +18,7 @@ import contextlib
 
 
 
-__version__ = "3.5.0"
+__version__ = "3.5.1"
 
 
 
@@ -1333,20 +1333,20 @@ def run_gui_mode():
             add_dsc_row(dsc_input_area, "Alert Webhook URL:", self.var_discord_url)
             
             # --- CONSOLE AREA ---
-            self.console = scrolledtext.ScrolledText(self.root, font=("Cascadia Code", 10), state=tk.DISABLED, relief="flat", borderwidth=1)
+            self.console = scrolledtext.ScrolledText(self.root, font=("Cascadia Code", 9), state=tk.DISABLED, relief="flat", borderwidth=1)
             self.console.pack(fill=tk.BOTH, expand=True, padx=10, pady=(0, 5))
             self.setup_tags()
 
             input_frame = ttk.Frame(self.root)
             input_frame.pack(fill=tk.X, padx=10, pady=(0, 5))
             
-            ttk.Label(input_frame, text="> Command:", font=("Cascadia Code", 10, "bold")).pack(side=tk.LEFT, padx=(0, 5))
+            ttk.Label(input_frame, text="> Command:", font=("Cascadia Code", 9, "bold")).pack(side=tk.LEFT, padx=(0, 5))
             self.input_var = tk.StringVar()
-            self.entry_cmd = ttk.Entry(input_frame, textvariable=self.input_var, font=("Cascadia Code", 10))
+            self.entry_cmd = ttk.Entry(input_frame, textvariable=self.input_var, font=("Cascadia Code", 9))
             self.entry_cmd.pack(side=tk.LEFT, fill=tk.X, expand=True)
             self.entry_cmd.bind("<Return>", lambda e: self.send_command_ui())
             
-            footer = ttk.Frame(self.root, padding="5 0 5 5")
+            footer = ttk.Frame(self.root, padding="10")
             footer.pack(fill=tk.X)
             
             theme_btn = ttk.Button(footer, text="Toggle Theme", command=self.toggle_theme)
