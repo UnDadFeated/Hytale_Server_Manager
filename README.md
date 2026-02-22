@@ -6,7 +6,7 @@
   </p>
 
   <p>
-    <img alt="Version" src="https://img.shields.io/badge/version-3.6.0-blue.svg" />
+    <img alt="Version" src="https://img.shields.io/badge/version-3.7.0-blue.svg" />
     <img alt="Python" src="https://img.shields.io/badge/python-3.8%2B-blue.svg" />
     <img alt="Platform" src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey.svg" />
   </p>
@@ -128,4 +128,4 @@ Changes made to the server logic are primarily driven by the `hsm.conf` JSON fla
 
 ## 🏷️ Versioning
 
-**Current Version:** `3.6.0`
+**Current Version:** `3.7.0`
