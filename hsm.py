@@ -17,7 +17,7 @@ import webbrowser
 import contextlib
 import psutil
 
-__version__ = "3.7.2"
+__version__ = "3.7.4"
 
 
 
@@ -1300,24 +1300,23 @@ def run_gui_mode():
             ttk.Button(qa_buttons_frame, text="Worlds", width=10, command=lambda: open_dir(WORLD_DIR)).pack(fill=tk.X, pady=1)
             ttk.Button(qa_buttons_frame, text="Backups", width=10, command=lambda: open_dir(BACKUP_DIR)).pack(fill=tk.X, pady=1)
 
-            self.btn_start = ttk.Button(action_buttons_frame, text="START SERVER", command=self.start_server, width=20)
+            self.btn_start = ttk.Button(action_buttons_frame, text="START SERVER", command=self.start_server, width=20, style="StartPulse.TButton")
             self.btn_start.pack(pady=1)
-            self.btn_stop = ttk.Button(action_buttons_frame, text="STOP SERVER", command=self.stop_server, state=tk.DISABLED, width=20)
+            self.btn_stop = ttk.Button(action_buttons_frame, text="STOP SERVER", command=self.stop_server, state=tk.DISABLED, width=20, style="StopAlert.TButton")
             self.btn_stop.pack(pady=1)
             
             ttk.Label(action_buttons_frame, text=f"Version: {self.config.get('last_server_version', 'Unknown')}", font=("Consolas", 8), foreground="gray").pack(pady=(0, 2))
+            
+            self.cpu_var = tk.StringVar(value="CPU: 0%")
+            self.ram_var = tk.StringVar(value="RAM: 0%")
+            ttk.Label(action_buttons_frame, textvariable=self.cpu_var, font=("Consolas", 8), foreground="gray").pack()
+            ttk.Label(action_buttons_frame, textvariable=self.ram_var, font=("Consolas", 8), foreground="gray").pack()
 
             self.lbl_status = ttk.Label(c_col3, textvariable=self.status_var, font=("Consolas", 9, "bold"))
             self.lbl_status.grid(row=1, column=0, pady=2)
             
             self.lbl_uptime = ttk.Label(c_col3, textvariable=self.uptime_var, font=("Consolas", 9))
             self.lbl_uptime.grid(row=1, column=1, pady=2)
-            
-            self.cpu_var = tk.StringVar(value="CPU: 0%")
-            self.ram_var = tk.StringVar(value="RAM: 0%")
-            
-            ttk.Label(c_col3, textvariable=self.cpu_var, font=("Consolas", 8), foreground="gray").grid(row=2, column=0)
-            ttk.Label(c_col3, textvariable=self.ram_var, font=("Consolas", 8), foreground="gray").grid(row=2, column=1)
             
             self.console = scrolledtext.ScrolledText(self.root, font=("Consolas", 8), width=88, state=tk.DISABLED, relief="solid", borderwidth=1)
             self.console.pack(fill=tk.BOTH, expand=True, padx=10, pady=(2, 0))
