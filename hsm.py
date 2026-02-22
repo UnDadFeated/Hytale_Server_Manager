@@ -17,7 +17,7 @@ import webbrowser
 
 
 
-__version__ = "3.3.9"
+__version__ = "3.3.10"
 
 
 
@@ -383,8 +383,13 @@ class HytaleUpdaterCore:
             cmd = updater_cmd + ["-print-version"]
             
             CREDENTIALS_FILE = ".hytale-downloader-credentials.json"
-            if os.path.exists(CREDENTIALS_FILE):
-                cmd.extend(["-credentials-path", os.path.abspath(CREDENTIALS_FILE)])
+            exe_dir = os.path.dirname(updater_cmd[0])
+            cred_path = os.path.join(exe_dir, CREDENTIALS_FILE)
+            if not os.path.exists(cred_path):
+                cred_path = CREDENTIALS_FILE
+            
+            if os.path.exists(cred_path):
+                cmd.extend(["-credentials-path", os.path.abspath(cred_path)])
 
             # Add timeout to avoid freezing if the updater requires OAuth authentication
             # Incremental updates or slow connections might take longer than 5 seconds
@@ -666,14 +671,20 @@ except Exception as e:
                          install_success = True
 
             if not install_success:
-                 # Copy credentials if they exist
+                 # Resolve credentials path
                 CREDENTIALS_FILE = ".hytale-downloader-credentials.json"
-                if os.path.exists(CREDENTIALS_FILE):
+                exe_dir = os.path.dirname(resolved_cmd[0])
+                cred_path = os.path.join(exe_dir, CREDENTIALS_FILE)
+                if not os.path.exists(cred_path):
+                    cred_path = CREDENTIALS_FILE
+                
+                run_cmd = resolved_cmd.copy()
+                if os.path.exists(cred_path):
+                    run_cmd.extend(["-credentials-path", os.path.abspath(cred_path)])
                     try:
-                        shutil.copy2(CREDENTIALS_FILE, os.path.join(staging_dir, CREDENTIALS_FILE))
-                        self.log(f"Copied {CREDENTIALS_FILE} to staging.")
-                    except Exception as e:
-                        self.log(f"Failed to copy credentials: {e}")
+                        shutil.copy2(cred_path, os.path.join(staging_dir, CREDENTIALS_FILE))
+                    except Exception:
+                        pass
 
                 self.log(f"Running updater in: {staging_dir}...")
                 
@@ -681,7 +692,7 @@ except Exception as e:
                 # We use stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize=1, universal_newlines=True
                 # to read line by line efficiently and print it.
                 process = subprocess.Popen(
-                    resolved_cmd, cwd=staging_dir, 
+                    run_cmd, cwd=staging_dir, 
                     stdout=subprocess.PIPE, stderr=subprocess.STDOUT, 
                     bufsize=1, universal_newlines=True
                 )
