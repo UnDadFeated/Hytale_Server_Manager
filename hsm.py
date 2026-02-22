@@ -1158,7 +1158,7 @@ def run_gui_mode():
             self.root = root
             self.root.title(f"Hytale Server Manager v{__version__}")
             
-            self.root.geometry("1000x800")
+            self.root.geometry("1080x800")
             self.root.state("normal")
 
             self.config = load_config()
@@ -1321,7 +1321,7 @@ def run_gui_mode():
             self.lbl_uptime = ttk.Label(c_col3, textvariable=self.uptime_var, font=("Consolas", 9))
             self.lbl_uptime.grid(row=1, column=1, pady=2)
             
-            self.console = scrolledtext.ScrolledText(self.root, font=("Consolas", 8), width=88, state=tk.DISABLED, relief="solid", borderwidth=1)
+            self.console = scrolledtext.ScrolledText(self.root, font=("Consolas", 8), width=100, state=tk.DISABLED, relief="solid", borderwidth=1)
             self.console.pack(fill=tk.BOTH, expand=True, padx=10, pady=(2, 0))
             self.setup_tags()
 
