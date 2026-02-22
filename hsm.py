@@ -14,10 +14,11 @@ import signal
 import json
 import traceback
 import webbrowser
+import contextlib
 
 
 
-__version__ = "3.4.3"
+__version__ = "3.4.4"
 
 
 
@@ -1343,7 +1344,9 @@ def run_gui_mode():
             def open_donation_link():
                 pp_url = "https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=jscheema@gmail.com&item_name=Hytale%20Server%20Updater&amount=5.00&currency_code=USD&lc=US"
                 try:
-                    success = webbrowser.open(pp_url)
+                    with open(os.devnull, 'w') as null_err:
+                        with contextlib.redirect_stderr(null_err):
+                            success = webbrowser.open(pp_url)
                     if not success:
                         self.core.log_queue_wrapper(f"[Donate] Could not open browser. Please visit: {pp_url}")
                 except Exception as e:
