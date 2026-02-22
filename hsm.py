@@ -17,7 +17,7 @@ import webbrowser
 
 
 
-__version__ = "3.4.2"
+__version__ = "3.4.3"
 
 
 
@@ -1340,8 +1340,16 @@ def run_gui_mode():
             
             ttk.Label(donate_frame, text="☕ Buy me a coffee:").pack(side=tk.LEFT, padx=5)
             
-            pp_url = "https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=jscheema@gmail.com&item_name=Hytale%20Server%20Updater&amount=5.00&currency_code=USD"
-            btn_pp = ttk.Button(donate_frame, text="PayPal ($5)", command=lambda: webbrowser.open(pp_url))
+            def open_donation_link():
+                pp_url = "https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=jscheema@gmail.com&item_name=Hytale%20Server%20Updater&amount=5.00&currency_code=USD&lc=US"
+                try:
+                    success = webbrowser.open(pp_url)
+                    if not success:
+                        self.core.log_queue_wrapper(f"[Donate] Could not open browser. Please visit: {pp_url}")
+                except Exception as e:
+                    self.core.log_queue_wrapper(f"[Donate] Failed to open browser ({e}). Please visit: {pp_url}")
+
+            btn_pp = ttk.Button(donate_frame, text="PayPal ($5)", command=open_donation_link)
             btn_pp.pack(side=tk.LEFT, padx=2)
 
         def send_command_ui(self):
