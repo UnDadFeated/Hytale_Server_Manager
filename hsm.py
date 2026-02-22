@@ -17,7 +17,7 @@ import webbrowser
 
 
 
-__version__ = "3.3.11"
+__version__ = "3.3.12"
 
 
 
@@ -383,10 +383,17 @@ class HytaleUpdaterCore:
             cmd = updater_cmd + ["-print-version"]
             
             CREDENTIALS_FILE = ".hytale-downloader-credentials.json"
-            cred_path = os.path.abspath(CREDENTIALS_FILE)
+            exe_dir = os.path.dirname(os.path.abspath(updater_cmd[0]))
+            cred_path = os.path.join(exe_dir, CREDENTIALS_FILE)
             cmd.extend(["-credentials-path", cred_path])
 
             try:
+                # Ensure the executable directory is writable on Linux
+                if not IS_WINDOWS and os.path.exists(exe_dir):
+                    try:
+                        os.chmod(exe_dir, 0o775)
+                    except Exception:
+                        pass
                 # We use a 10s timeout. If the downloader halts to prompt for an OAuth login,
                 # it will timeout. We can then gracefully catch the timeout and display the prompt.
                 result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
@@ -676,12 +683,20 @@ except Exception as e:
                          install_success = True
 
             if not install_success:
-                 # Resolve credentials path explicitly to the root directory
+                 # Target the credentials file explicitly where the executable is located
                 CREDENTIALS_FILE = ".hytale-downloader-credentials.json"
-                cred_path = os.path.abspath(CREDENTIALS_FILE)
+                exe_dir = os.path.dirname(os.path.abspath(resolved_cmd[0]))
+                cred_path = os.path.join(exe_dir, CREDENTIALS_FILE)
                 
                 run_cmd = resolved_cmd.copy()
                 run_cmd.extend(["-credentials-path", cred_path])
+
+                # Ensure the executable directory is writable on Linux
+                if not IS_WINDOWS and os.path.exists(exe_dir):
+                    try:
+                        os.chmod(exe_dir, 0o775)
+                    except Exception:
+                        pass
 
                 self.log(f"Running updater in: {staging_dir}...")
                 
