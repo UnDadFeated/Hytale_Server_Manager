@@ -17,7 +17,7 @@ import webbrowser
 
 
 
-__version__ = "3.3.8"
+__version__ = "3.3.9"
 
 
 
@@ -381,8 +381,14 @@ class HytaleUpdaterCore:
         """Queries the updater for the latest remote server version."""
         try:
             cmd = updater_cmd + ["-print-version"]
+            
+            CREDENTIALS_FILE = ".hytale-downloader-credentials.json"
+            if os.path.exists(CREDENTIALS_FILE):
+                cmd.extend(["-credentials-path", os.path.abspath(CREDENTIALS_FILE)])
+
             # Add timeout to avoid freezing if the updater requires OAuth authentication
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
+            # Incremental updates or slow connections might take longer than 5 seconds
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
             if result.returncode == 0:
                 return result.stdout.strip()
             return None
