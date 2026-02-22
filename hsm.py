@@ -17,7 +17,7 @@ import webbrowser
 
 
 
-__version__ = "3.4.0"
+__version__ = "3.4.1"
 
 
 
@@ -1227,13 +1227,13 @@ def run_gui_mode():
             mem_frame = ttk.Frame(c_col1)
             mem_frame.pack(anchor="w", pady=2)
             ttk.Label(mem_frame, text="Server RAM:").pack(side=tk.LEFT)
-            ttk.Entry(mem_frame, textvariable=self.var_memory, width=6).pack(side=tk.LEFT, padx=5)
+            ttk.Entry(mem_frame, textvariable=self.var_memory, width=5).pack(side=tk.LEFT, padx=5)
             self.lbl_reboot = ttk.Label(mem_frame, text="⚠ Reboot Required", foreground="orange")
             
             aot_frame = ttk.Frame(c_col1)
             aot_frame.pack(anchor="w", fill=tk.X, pady=2)
-            ttk.Label(aot_frame, text="Server AOT:").pack(side=tk.LEFT)
-            ttk.Entry(aot_frame, textvariable=self.var_aot, width=15).pack(side=tk.LEFT, padx=5)
+            ttk.Label(aot_frame, text="AOT:").pack(side=tk.LEFT)
+            ttk.Entry(aot_frame, textvariable=self.var_aot, width=10).pack(side=tk.LEFT, padx=5)
             
             def browse_aot():
                 path = filedialog.askopenfilename(filetypes=[("AOT Files", "*.aot"), ("All Files", "*.*")])
