@@ -17,7 +17,7 @@ import webbrowser
 import contextlib
 import psutil
 
-__version__ = "3.7.1"
+__version__ = "3.7.2"
 
 
 
@@ -1319,7 +1319,7 @@ def run_gui_mode():
             ttk.Label(c_col3, textvariable=self.cpu_var, font=("Consolas", 8), foreground="gray").grid(row=2, column=0)
             ttk.Label(c_col3, textvariable=self.ram_var, font=("Consolas", 8), foreground="gray").grid(row=2, column=1)
             
-            self.console = scrolledtext.ScrolledText(self.root, font=("Consolas", 8), state=tk.DISABLED, relief="solid", borderwidth=1)
+            self.console = scrolledtext.ScrolledText(self.root, font=("Consolas", 8), width=88, state=tk.DISABLED, relief="solid", borderwidth=1)
             self.console.pack(fill=tk.BOTH, expand=True, padx=10, pady=(2, 0))
             self.setup_tags()
 
