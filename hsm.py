@@ -17,7 +17,7 @@ import webbrowser
 
 
 
-__version__ = "3.3.12"
+__version__ = "3.4.0"
 
 
 
@@ -617,7 +617,7 @@ except Exception as e:
                     break
             
             # 2. Look for Server components
-            server_components = [SERVER_JAR, AOT_FILE, "Licenses"]
+            server_components = [SERVER_JAR, "Licenses"]
             for comp in server_components:
                 for base in source_bases:
                     src = os.path.join(base, comp)
@@ -861,9 +861,12 @@ except Exception as e:
         env["_JAVA_OPTIONS"] = f"-Xmx{memory}"
         
         cmd = ["java", f"-Xmx{memory}"]
-        if os.path.exists(AOT_FILE):
-             self.log(f"Using AOT Cache: {AOT_FILE}")
-             cmd.append(f"-XX:AOTCache={AOT_FILE}")
+        
+        custom_aot = self.config.get("server_aot", "")
+        if custom_aot and os.path.exists(custom_aot):
+             self.log(f"Using Custom AOT Cache: {custom_aot}")
+             cmd.append(f"-XX:AOTCache={custom_aot}")
+             
         cmd.extend(["-jar", SERVER_JAR, "--assets", assets_path])
 
         try:
@@ -1173,9 +1176,11 @@ def run_gui_mode():
             self.var_discord_channel = tk.StringVar(value=str(self.config.get("discord_channel_id", 0)))
             self.var_schedule_time = tk.StringVar(value=str(self.config.get("restart_interval", 12)))
             self.var_memory = tk.StringVar(value=self.config.get("server_memory", "8G"))
+            self.var_aot = tk.StringVar(value=self.config.get("server_aot", ""))
             self.var_max_backups = tk.StringVar(value=str(self.config.get("max_backups", 3)))
             
             self.var_memory.trace_add("write", self.on_config_change)
+            self.var_aot.trace_add("write", self.on_config_change)
 
             self.status_var = tk.StringVar(value="Status: Stopped")
             self.uptime_var = tk.StringVar(value="Uptime: 00:00:00")
@@ -1224,6 +1229,19 @@ def run_gui_mode():
             ttk.Label(mem_frame, text="Server RAM:").pack(side=tk.LEFT)
             ttk.Entry(mem_frame, textvariable=self.var_memory, width=6).pack(side=tk.LEFT, padx=5)
             self.lbl_reboot = ttk.Label(mem_frame, text="⚠ Reboot Required", foreground="orange")
+            
+            aot_frame = ttk.Frame(c_col1)
+            aot_frame.pack(anchor="w", fill=tk.X, pady=2)
+            ttk.Label(aot_frame, text="Server AOT:").pack(side=tk.LEFT)
+            ttk.Entry(aot_frame, textvariable=self.var_aot, width=15).pack(side=tk.LEFT, padx=5)
+            
+            def browse_aot():
+                path = filedialog.askopenfilename(filetypes=[("AOT Files", "*.aot"), ("All Files", "*.*")])
+                if path:
+                     self.var_aot.set(path)
+                     self.save()
+                     
+            ttk.Button(aot_frame, text="Browse", width=8, command=browse_aot).pack(side=tk.LEFT)
             
             c_col2 = ttk.Frame(options_row)
             c_col2.pack(side=tk.LEFT, fill=tk.Y, padx=(0, 20))
@@ -1286,6 +1304,8 @@ def run_gui_mode():
             self.btn_start.pack(pady=1)
             self.btn_stop = ttk.Button(action_buttons_frame, text="STOP SERVER", command=self.stop_server, state=tk.DISABLED, width=20)
             self.btn_stop.pack(pady=1)
+            
+            ttk.Label(action_buttons_frame, text=f"Version: {self.config.get('last_server_version', 'Unknown')}", font=("Consolas", 8), foreground="gray").pack(pady=(0, 2))
 
             self.lbl_status = ttk.Label(c_col3, textvariable=self.status_var, font=("Consolas", 9))
             self.lbl_status.grid(row=1, column=0, pady=2)
@@ -1363,6 +1383,7 @@ def run_gui_mode():
                 "discord_channel_id": int(self.var_discord_channel.get()) if self.var_discord_channel.get().isdigit() else 0,
                 "restart_interval": self.var_schedule_time.get(),
                 "server_memory": self.var_memory.get(),
+                "server_aot": self.var_aot.get(),
                 "max_backups": int(self.var_max_backups.get()) if self.var_max_backups.get().isdigit() else 3,
                 "manager_auto_update": self.var_mgr_update.get()
             })
