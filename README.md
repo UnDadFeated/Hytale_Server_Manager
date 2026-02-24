@@ -67,7 +67,8 @@ Running the script parameter-free initializes the Graphical User Interface.
 python hsm.py
 ```
 
-* **Real-time Output:** View live stdout and stderr streams directly in the application pane.
+* **Unified Flat Design:** A streamlined, column-based layout that displays all server controls, metrics, and configurations at a glance—no tab switching required.
+* **Real-time Output:** View live stdout and stderr streams directly in the expanded application console pane, optimized to prevent line wrapping for better readability.
 * **Visual Configurations:** Toggle crucial behaviors like Backups, Discord Webhooks, and Auto-Restart intervals directly through application checkboxes.
 * **Path Shortcuts:** Provides native file-explorer context buttons to rapidly open your Server Root, Worlds directory, and Backups archive.
 * **Theming Options:** Supports dynamically un-toggling light and dark mode elements.
