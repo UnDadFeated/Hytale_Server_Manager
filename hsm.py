@@ -17,7 +17,7 @@ import webbrowser
 import contextlib
 import psutil
 
-__version__ = "3.7.5"
+__version__ = "3.7.6"
 
 
 
