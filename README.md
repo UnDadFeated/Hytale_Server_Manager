@@ -6,7 +6,7 @@
   </p>
 
   <p>
-    <img alt="Version" src="https://img.shields.io/badge/version-3.7.5-blue.svg" />
+    <img alt="Version" src="https://img.shields.io/badge/version-3.7.6-blue.svg" />
     <img alt="Python" src="https://img.shields.io/badge/python-3.8%2B-blue.svg" />
     <img alt="Platform" src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey.svg" />
   </p>
@@ -39,7 +39,7 @@
 | :--- | :--- |
 | **Operating System** | Windows, Linux, or macOS |
 | **Memory** | At least `4G` allocated to the server heap (`8G` recommended) |
-| **Java Environment** | **Java 25 is strictly required.** [Download from Adoptium](https://adoptium.net/temurin/releases/?version=25) |
+| **Java Environment** | **Java 25 or higher is strictly required.** [Download from Adoptium](https://adoptium.net/temurin/releases/?version=25) |
 | **Python** | Python 3.8 or higher + `psutil` module |
 
 #### OS-Specific Python Setup
@@ -67,7 +67,8 @@ Running the script parameter-free initializes the Graphical User Interface.
 python hsm.py
 ```
 
-* **Real-time Output:** View live stdout and stderr streams directly in the application pane.
+* **Unified Flat Design:** A streamlined, column-based layout that displays all server controls, metrics, and configurations at a glance—no tab switching required.
+* **Real-time Output:** View live stdout and stderr streams directly in the expanded application console pane, optimized to prevent line wrapping for better readability.
 * **Visual Configurations:** Toggle crucial behaviors like Backups, Discord Webhooks, and Auto-Restart intervals directly through application checkboxes.
 * **Path Shortcuts:** Provides native file-explorer context buttons to rapidly open your Server Root, Worlds directory, and Backups archive.
 * **Theming Options:** Supports dynamically un-toggling light and dark mode elements.
@@ -129,4 +130,4 @@ Changes made to the server logic are primarily driven by the `hsm.conf` JSON fla
 
 ## 🏷️ Versioning
 
-**Current Version:** `3.7.5`
+**Current Version:** `3.7.6`
