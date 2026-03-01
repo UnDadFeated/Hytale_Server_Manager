@@ -39,7 +39,7 @@
 | :--- | :--- |
 | **Operating System** | Windows, Linux, or macOS |
 | **Memory** | At least `4G` allocated to the server heap (`8G` recommended) |
-| **Java Environment** | **Java 25 is strictly required.** [Download from Adoptium](https://adoptium.net/temurin/releases/?version=25) |
+| **Java Environment** | **Java 25 or higher is strictly required.** [Download from Adoptium](https://adoptium.net/temurin/releases/?version=25) |
 | **Python** | Python 3.8 or higher + `psutil` module |
 
 #### OS-Specific Python Setup

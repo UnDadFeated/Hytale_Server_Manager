@@ -224,16 +224,28 @@ class HytaleUpdaterCore:
         threading.Thread(target=run_bot, daemon=True).start()
 
     def check_java_version(self):
-        """Verifies if Java 25 is installed and available."""
+        """Verifies if Java 25 or higher is installed and available."""
         self.log("Checking Java version...")
         try:
             result = subprocess.run(["java", "-version"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
             output = result.stdout
-            if 'version "25' in output or 'version "1.25' in output:
-                self.log("Java 25 detected.")
-                return True
+            
+            match = re.search(r'version "(?:1\.)?(\d+)', output)
+            if match:
+                major_version = int(match.group(1))
+                if major_version >= JAVA_VERSION_REQ:
+                    self.log(f"Java {major_version} detected.")
+                    return True
+                else:
+                    self.log(f"WARNING: Java {major_version} detected, but Java {JAVA_VERSION_REQ} or higher is required. Output:\n{output}")
+                    return False
             else:
-                self.log(f"WARNING: Java 25 not detected. Output:\n{output}")
+                # Fallback string matching
+                if f'version "{JAVA_VERSION_REQ}' in output or f'version "1.{JAVA_VERSION_REQ}' in output:
+                    self.log(f"Java {JAVA_VERSION_REQ} detected.")
+                    return True
+                
+                self.log(f"WARNING: Java {JAVA_VERSION_REQ} or higher not detected. Output:\n{output}")
                 return False
         except FileNotFoundError:
             self.log("ERROR: Java not found in PATH.")
