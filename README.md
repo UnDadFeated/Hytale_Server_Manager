@@ -6,7 +6,7 @@
   </p>
 
   <p>
-    <img alt="Version" src="https://img.shields.io/badge/version-3.7.6-blue.svg" />
+    <img alt="Version" src="https://img.shields.io/badge/version-3.7.7-blue.svg" />
     <img alt="Python" src="https://img.shields.io/badge/python-3.8%2B-blue.svg" />
     <img alt="Platform" src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey.svg" />
   </p>
@@ -51,9 +51,11 @@
 
 ## 🚀 Installation Guide
 
-1. **Clone the Repository:** Download the repository source code, or grab the latest standalone `hsm.py` script.
+1. **Clone the Repository:** Download the repository source code, or grab the latest standalone `hsm.pyw` script.
 2. **Locate Server Path:** Move the python script into the root directory where you intend to run (or are currently running) your Hytale dedicated server.
-3. **Run Application:** Launch the program via your command line interface.
+3. **Run Application:** 
+   - **Windows:** Simply double-click `hsm.pyw` to launch the manager silently in the background (using `pythonw.exe`). No console window will appear!
+   - **Linux / macOS:** Launch the script via your command line interface or right-click and run it normally.
 
 ---
 
@@ -61,11 +63,13 @@
 
 ### Graphical Mode (Default)
 
-Running the script parameter-free initializes the Graphical User Interface.
+Running the script initializes the Graphical User Interface.
 
 ```bash
-python hsm.py
+python3 hsm.pyw
 ```
+
+*(Note: On Windows, opening `hsm.pyw` with `pythonw.exe` hides the background console).*
 
 * **Unified Flat Design:** A streamlined, column-based layout that displays all server controls, metrics, and configurations at a glance—no tab switching required.
 * **Real-time Output:** View live stdout and stderr streams directly in the expanded application console pane, optimized to prevent line wrapping for better readability.
@@ -78,7 +82,7 @@ python hsm.py
 Targeting headless environments, the application can bypass the `tkinter` dependency completely. All required values are read directly from `hsm.conf` upon boot sequence.
 
 ```bash
-python hsm.py -nogui
+python3 hsm.pyw -nogui
 ```
 
 ### Advanced Linux Utilities
@@ -86,10 +90,10 @@ python hsm.py -nogui
 The script provides CLI parameters to integrate seamlessly with various Linux distribution paradigms.
 
 **Installing as a Background Service:**
-Deploys `hsm.py` into a systemd service struct, enabling it to run entirely in the background and auto-boot alongside the machine.
+Deploys `hsm.pyw` into a systemd service struct, enabling it to run entirely in the background and auto-boot alongside the machine.
 
 ```bash
-sudo python3 hsm.py -install-service
+sudo python3 hsm.pyw -install-service
 sudo systemctl start hytale-manager
 ```
 
@@ -97,7 +101,7 @@ sudo systemctl start hytale-manager
 Creates a `.desktop` launch hook that executes upon the current user logging into a graphical desktop environment.
 
 ```bash
-python3 hsm.py -enable-autostart
+python3 hsm.pyw -enable-autostart
 ```
 
 ---
@@ -130,4 +134,4 @@ Changes made to the server logic are primarily driven by the `hsm.conf` JSON fla
 
 ## 🏷️ Versioning
 
-**Current Version:** `3.7.6`
+**Current Version:** `3.7.7`

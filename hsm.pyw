@@ -17,7 +17,14 @@ import webbrowser
 import contextlib
 import psutil
 
-__version__ = "3.7.6"
+# Windows flag for hiding child console windows.
+if platform.system() == "Windows":
+    CREATE_NO_WINDOW = 0x08000000
+    # Also optionally use STARTUPINFO to hide things deeper if needed.
+else:
+    CREATE_NO_WINDOW = 0
+
+__version__ = "3.7.8"
 
 
 
@@ -227,7 +234,15 @@ class HytaleUpdaterCore:
         """Verifies if Java 25 or higher is installed and available."""
         self.log("Checking Java version...")
         try:
-            result = subprocess.run(["java", "-version"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+            kwargs = {}
+            if IS_WINDOWS:
+                startupinfo = subprocess.STARTUPINFO()
+                startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+                startupinfo.wShowWindow = subprocess.SW_HIDE
+                kwargs["startupinfo"] = startupinfo
+                kwargs["creationflags"] = CREATE_NO_WINDOW
+                
+            result = subprocess.run(["java", "-version"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, **kwargs)
             output = result.stdout
             
             match = re.search(r'version "(?:1\.)?(\d+)', output)
@@ -368,8 +383,16 @@ class HytaleUpdaterCore:
         self.log("Checking for running Hytale server...")
         if IS_WINDOWS:
             try:
+                kwargs = {}
+                if IS_WINDOWS:
+                    startupinfo = subprocess.STARTUPINFO()
+                    startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+                    startupinfo.wShowWindow = subprocess.SW_HIDE
+                    kwargs["startupinfo"] = startupinfo
+                    kwargs["creationflags"] = CREATE_NO_WINDOW
+                
                 cmd = 'wmic process where "name=\'java.exe\'" get commandline, processid'
-                result = subprocess.run(cmd, capture_output=True, text=True, shell=True)
+                result = subprocess.run(cmd, capture_output=True, text=True, shell=True, **kwargs)
                 for line in result.stdout.splitlines():
                     if SERVER_JAR in line:
                         parts = line.split()
@@ -377,7 +400,7 @@ class HytaleUpdaterCore:
                             pid = parts[-1].strip()
                             if pid.isdigit():
                                 self.log(f"Found running server (PID: {pid}). Stopping...")
-                                subprocess.run(f"taskkill /PID {pid} /F", shell=True)
+                                subprocess.run(f"taskkill /PID {pid} /F", shell=True, creationflags=CREATE_NO_WINDOW)
             except Exception: pass
         else:
              try:
@@ -408,7 +431,14 @@ class HytaleUpdaterCore:
                         pass
                 # We use a 10s timeout. If the downloader halts to prompt for an OAuth login,
                 # it will timeout. We can then gracefully catch the timeout and display the prompt.
-                result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+                kwargs = {}
+                if IS_WINDOWS:
+                    startupinfo = subprocess.STARTUPINFO()
+                    startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+                    startupinfo.wShowWindow = subprocess.SW_HIDE
+                    kwargs["startupinfo"] = startupinfo
+                    kwargs["creationflags"] = CREATE_NO_WINDOW
+                result = subprocess.run(cmd, capture_output=True, text=True, timeout=10, **kwargs)
                 if result.returncode == 0:
                     return result.stdout.strip()
                 return None
@@ -463,8 +493,15 @@ class HytaleUpdaterCore:
             if parse_ver(remote_version) > parse_ver(local_version):
                 self.log(f"New manager version found ({remote_version}). Downloading...")
                 
+                # Use current file extension
+                script_ext = os.path.splitext(sys.argv[0])[1]
+                if script_ext not in [".py", ".pyw"]:
+                     script_ext = ".py" # fallback
+                     
+                new_file = f"hsm{script_ext}.new"
+                
                 # Save the already downloaded content
-                with open("hsm.py.new", "w", encoding='utf-8') as f:
+                with open(new_file, "w", encoding='utf-8') as f:
                     f.write(remote_content)
                 
                 self.log("File downloaded. Preparing installer...")
@@ -498,7 +535,7 @@ def is_pid_running(p):
     try:
         if os.name == 'nt':
             # tasklist returns filter info if process not found or PID if found
-            output = subprocess.check_output(f'tasklist /FI "PID eq {{p}}"', shell=True).decode()
+            output = subprocess.check_output(f'tasklist /FI "PID eq {{p}}"', shell=True, creationflags={CREATE_NO_WINDOW}).decode()
             return str(p) in output
         else:
             os.kill(p, 0)
@@ -526,24 +563,50 @@ try:
         except Exception as e:
             print(f"Failed to remove version.py: {{e}}")
 
-    if os.path.exists("hsm.py.new"):
-        if os.path.exists("hsm.py"): os.remove("hsm.py")
-        os.rename("hsm.py.new", "hsm.py")
-        print("Updated hsm.py")
+    script_ext = os.path.splitext({repr(sys.argv[0])})[1]
+    if script_ext not in [".py", ".pyw"]:
+        script_ext = ".py"
+        
+    old_file = f"hsm{{script_ext}}"
+    new_file = f"hsm{{script_ext}}.new"
+
+    if os.path.exists(new_file):
+        if os.path.exists(old_file): os.remove(old_file)
+        os.rename(new_file, old_file)
+        print(f"Updated {{old_file}}")
         
     print("Files updated. Restarting manager...")
-    subprocess.Popen([sys.executable] + {args_repr})
+    
+    # We want the manager to restart in pythonw if it's currently running in pythonw
+    # However python is needed for the GUI to do the printing.
+    # if it's currently running from a bat or standard executable we just use sys.executable
+    if "pythonw" in sys.executable.lower():
+         subprocess.Popen([sys.executable] + {args_repr}, creationflags={CREATE_NO_WINDOW})
+    else:
+         subprocess.Popen([sys.executable] + {args_repr})
     
 except Exception as e:
     print(f"Update failed: {{e}}")
     input("Press Enter to exit...")
 '''
 
+
         with open("updater_installer.py", "w") as f:
             f.write(installer_code)
             
         self.log("Launching installer and exiting...")
-        subprocess.Popen([sys.executable, "updater_installer.py"])
+        
+        # If the main process is running using pythonw, we need to launch the updater installer
+        # with standard python.exe so the user can see the console logs during the 10 second update
+        if "pythonw" in sys.executable.lower():
+            python_exe = sys.executable.lower().replace("pythonw.exe", "python.exe")
+            if os.path.exists(python_exe):
+                 subprocess.Popen(["cmd.exe", "/c", "start", python_exe, "updater_installer.py"], creationflags=CREATE_NO_WINDOW)
+            else:
+                 subprocess.Popen([sys.executable, "updater_installer.py"], creationflags=CREATE_NO_WINDOW)
+        else:
+            subprocess.Popen(["cmd.exe", "/c", "start", sys.executable, "updater_installer.py"], creationflags=CREATE_NO_WINDOW) if IS_WINDOWS else subprocess.Popen([sys.executable, "updater_installer.py"])
+
         os._exit(0)
 
     def _install_from_zip_or_folder(self, staging_dir, specific_zip=None):
@@ -715,10 +778,18 @@ except Exception as e:
                 # Run the downloader CLI
                 # We use stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize=1, universal_newlines=True
                 # to read line by line efficiently and print it.
+                kwargs = {}
+                if IS_WINDOWS:
+                    startupinfo = subprocess.STARTUPINFO()
+                    startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+                    startupinfo.wShowWindow = subprocess.SW_HIDE
+                    kwargs["startupinfo"] = startupinfo
+                    kwargs["creationflags"] = CREATE_NO_WINDOW
+                    
                 process = subprocess.Popen(
                     run_cmd, cwd=staging_dir, 
                     stdout=subprocess.PIPE, stderr=subprocess.STDOUT, 
-                    bufsize=1, universal_newlines=True
+                    bufsize=1, universal_newlines=True, **kwargs
                 )
                 
                 # Iterate over the output line by line as it is produced
@@ -882,8 +953,13 @@ except Exception as e:
         cmd.extend(["-jar", SERVER_JAR, "--assets", assets_path])
 
         try:
-            startupinfo = subprocess.STARTUPINFO() if IS_WINDOWS else None
-            creationflags = subprocess.CREATE_NEW_PROCESS_GROUP if IS_WINDOWS else 0
+            startupinfo = None
+            creationflags = 0
+            if IS_WINDOWS:
+                startupinfo = subprocess.STARTUPINFO()
+                startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+                startupinfo.wShowWindow = subprocess.SW_HIDE
+                creationflags = CREATE_NO_WINDOW
             
             self.server_process = subprocess.Popen(
                 cmd, env=env,
@@ -1581,7 +1657,7 @@ def main():
         try: os.remove("updater_installer.py")
         except: pass
         
-    for f in ["version.py.new", "hsm.py.new"]:
+    for f in ["version.py.new", "hsm.py.new", "hsm.pyw.new"]:
          if os.path.exists(f):
              try: os.remove(f)
              except: pass
