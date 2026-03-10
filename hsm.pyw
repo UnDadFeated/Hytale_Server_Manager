@@ -24,7 +24,7 @@ if platform.system() == "Windows":
 else:
     CREATE_NO_WINDOW = 0
 
-__version__ = "3.7.8"
+__version__ = "3.7.9"
 
 
 
@@ -468,7 +468,7 @@ class HytaleUpdaterCore:
         # Add cache buster
         ts = int(time.time())
         # We now check hytale_server_manager.py directly for the version
-        MANAGER_URL = f"https://raw.githubusercontent.com/UnDadFeated/Hytale_Server_Manager/master/hsm.py?t={ts}"
+        MANAGER_URL = f"https://raw.githubusercontent.com/UnDadFeated/Hytale_Server_Manager/master/hsm.pyw?t={ts}"
         
         try:
             req = urllib.request.Request(MANAGER_URL, headers={'User-Agent': 'HytaleManagerUpdater'})
@@ -1621,7 +1621,7 @@ def print_help():
     abs_config_path = os.path.abspath(CONFIG_FILE)
     print(f"Hytale Server Manager v{__version__}")
     print("=" * 60)
-    print("Usage: python hsm.py [options]")
+    print("Usage: python hsm.pyw [options]")
     print("\nCommand Line Options:")
     print("  -nogui             : Run in console-only mode (headless). Useful for servers.")
     print("  -install-service   : (Linux) Installs systemd service for background operation.")
