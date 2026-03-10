@@ -24,7 +24,7 @@ if platform.system() == "Windows":
 else:
     CREATE_NO_WINDOW = 0
 
-__version__ = "3.7.7"
+__version__ = "3.7.8"
 
 
 
@@ -236,6 +236,10 @@ class HytaleUpdaterCore:
         try:
             kwargs = {}
             if IS_WINDOWS:
+                startupinfo = subprocess.STARTUPINFO()
+                startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+                startupinfo.wShowWindow = subprocess.SW_HIDE
+                kwargs["startupinfo"] = startupinfo
                 kwargs["creationflags"] = CREATE_NO_WINDOW
                 
             result = subprocess.run(["java", "-version"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, **kwargs)
@@ -379,8 +383,16 @@ class HytaleUpdaterCore:
         self.log("Checking for running Hytale server...")
         if IS_WINDOWS:
             try:
+                kwargs = {}
+                if IS_WINDOWS:
+                    startupinfo = subprocess.STARTUPINFO()
+                    startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+                    startupinfo.wShowWindow = subprocess.SW_HIDE
+                    kwargs["startupinfo"] = startupinfo
+                    kwargs["creationflags"] = CREATE_NO_WINDOW
+                
                 cmd = 'wmic process where "name=\'java.exe\'" get commandline, processid'
-                result = subprocess.run(cmd, capture_output=True, text=True, shell=True, creationflags=CREATE_NO_WINDOW)
+                result = subprocess.run(cmd, capture_output=True, text=True, shell=True, **kwargs)
                 for line in result.stdout.splitlines():
                     if SERVER_JAR in line:
                         parts = line.split()
@@ -421,6 +433,10 @@ class HytaleUpdaterCore:
                 # it will timeout. We can then gracefully catch the timeout and display the prompt.
                 kwargs = {}
                 if IS_WINDOWS:
+                    startupinfo = subprocess.STARTUPINFO()
+                    startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+                    startupinfo.wShowWindow = subprocess.SW_HIDE
+                    kwargs["startupinfo"] = startupinfo
                     kwargs["creationflags"] = CREATE_NO_WINDOW
                 result = subprocess.run(cmd, capture_output=True, text=True, timeout=10, **kwargs)
                 if result.returncode == 0:
@@ -764,6 +780,10 @@ except Exception as e:
                 # to read line by line efficiently and print it.
                 kwargs = {}
                 if IS_WINDOWS:
+                    startupinfo = subprocess.STARTUPINFO()
+                    startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+                    startupinfo.wShowWindow = subprocess.SW_HIDE
+                    kwargs["startupinfo"] = startupinfo
                     kwargs["creationflags"] = CREATE_NO_WINDOW
                     
                 process = subprocess.Popen(
@@ -933,8 +953,13 @@ except Exception as e:
         cmd.extend(["-jar", SERVER_JAR, "--assets", assets_path])
 
         try:
-            startupinfo = subprocess.STARTUPINFO() if IS_WINDOWS else None
-            creationflags = CREATE_NO_WINDOW if IS_WINDOWS else 0
+            startupinfo = None
+            creationflags = 0
+            if IS_WINDOWS:
+                startupinfo = subprocess.STARTUPINFO()
+                startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+                startupinfo.wShowWindow = subprocess.SW_HIDE
+                creationflags = CREATE_NO_WINDOW
             
             self.server_process = subprocess.Popen(
                 cmd, env=env,
