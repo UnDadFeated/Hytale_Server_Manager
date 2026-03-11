@@ -23,8 +23,7 @@ if platform.system() == "Windows":
     # Also optionally use STARTUPINFO to hide things deeper if needed.
 else:
     CREATE_NO_WINDOW = 0
-
-__version__ = "3.8.0"
+__version__ = "3.8.1"
 
 
 
@@ -597,16 +596,11 @@ except Exception as e:
             
         self.log("Launching installer and exiting...")
         
-        # If the main process is running using pythonw, we need to launch the updater installer
-        # with standard python.exe so the user can see the console logs during the 10 second update
-        if "pythonw" in sys.executable.lower():
-            python_exe = sys.executable.lower().replace("pythonw.exe", "python.exe")
-            if os.path.exists(python_exe):
-                 subprocess.Popen(["cmd.exe", "/c", "start", python_exe, "updater_installer.py"], creationflags=CREATE_NO_WINDOW)
-            else:
-                 subprocess.Popen([sys.executable, "updater_installer.py"], creationflags=CREATE_NO_WINDOW)
+        # Launch using the same executable that is currently running (usually pythonw.exe on Windows)
+        if IS_WINDOWS:
+            subprocess.Popen([sys.executable, "updater_installer.py"], creationflags=CREATE_NO_WINDOW)
         else:
-            subprocess.Popen(["cmd.exe", "/c", "start", sys.executable, "updater_installer.py"], creationflags=CREATE_NO_WINDOW) if IS_WINDOWS else subprocess.Popen([sys.executable, "updater_installer.py"])
+            subprocess.Popen([sys.executable, "updater_installer.py"])
 
         os._exit(0)
 
@@ -1248,6 +1242,7 @@ def run_gui_mode():
             self.root.title(f"Hytale Server Manager v{__version__}")
             
             self.root.geometry("1080x800")
+            self.root.resizable(False, False)
             self.root.state("normal")
 
             self.config = load_config()
