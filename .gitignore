@@ -1,3 +1,10 @@
 *.log
 __pycache__/
 *.py[cod]
+hytale-downloader/
+hytale-downloader-linux-amd64
+hytale-downloader-windows-amd64.exe
+hytale-downloader.zip
+test_popen.py
+updater_staging/
+QUICKSTART.md
