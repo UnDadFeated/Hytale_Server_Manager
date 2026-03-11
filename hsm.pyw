@@ -24,7 +24,7 @@ if platform.system() == "Windows":
 else:
     CREATE_NO_WINDOW = 0
 
-__version__ = "3.7.9"
+__version__ = "3.8.0"
 
 
 
@@ -100,7 +100,8 @@ def load_config():
         "restart_interval": 12,
         "server_memory": "8G",
         "max_backups": 3,
-        "manager_auto_update": True
+        "manager_auto_update": True,
+        "start_with_windows": False
     }
     if os.path.exists(CONFIG_FILE):
         try:
@@ -1266,6 +1267,7 @@ def run_gui_mode():
             self.var_memory = tk.StringVar(value=self.config.get("server_memory", "8G"))
             self.var_aot = tk.StringVar(value=self.config.get("server_aot", ""))
             self.var_max_backups = tk.StringVar(value=str(self.config.get("max_backups", 3)))
+            self.var_start_win = tk.BooleanVar(value=self.config.get("start_with_windows", False))
             
             self.var_memory.trace_add("write", self.on_config_change)
             self.var_aot.trace_add("write", self.on_config_change)
@@ -1431,6 +1433,12 @@ def run_gui_mode():
             self.var_mgr_update = tk.BooleanVar(value=self.config.get("manager_auto_update", True))
             ttk.Checkbutton(footer, text="Auto-Update Manager", variable=self.var_mgr_update, command=self.save).pack(side=tk.LEFT, padx=10)
             
+            self.var_start_win = tk.BooleanVar(value=self.config.get("start_with_windows", False))
+            cb_start_win = ttk.Checkbutton(footer, text="Start with Windows", variable=self.var_start_win, command=self.save_and_set_autostart)
+            cb_start_win.pack(side=tk.LEFT, padx=10)
+            if not IS_WINDOWS:
+                cb_start_win.config(state=tk.DISABLED)
+            
             donate_frame = ttk.Frame(footer)
             donate_frame.pack(side=tk.RIGHT)
             
@@ -1491,10 +1499,38 @@ def run_gui_mode():
                 "server_memory": self.var_memory.get(),
                 "server_aot": self.var_aot.get(),
                 "max_backups": int(self.var_max_backups.get()) if self.var_max_backups.get().isdigit() else 3,
-                "manager_auto_update": self.var_mgr_update.get()
+                "manager_auto_update": self.var_mgr_update.get(),
+                "start_with_windows": self.var_start_win.get()
             })
             self.core.config = self.config
             save_config(self.config)
+
+        def save_and_set_autostart(self):
+            self.save()
+            if IS_WINDOWS:
+                try:
+                    import winreg
+                    key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Run", 0, winreg.KEY_SET_VALUE)
+                    if self.var_start_win.get():
+                        script_path = os.path.abspath(sys.argv[0])
+                        python_exe = sys.executable
+                        if "pythonw.exe" not in python_exe.lower():
+                            possible_pythonw = os.path.join(os.path.dirname(python_exe), "pythonw.exe")
+                            if os.path.exists(possible_pythonw):
+                                python_exe = possible_pythonw
+                            else:
+                                python_exe = python_exe.lower().replace("python.exe", "pythonw.exe")
+                        
+                        cmd = f'"{python_exe}" "{script_path}" --startup-delay'
+                        winreg.SetValueEx(key, "HytaleServerManager", 0, winreg.REG_SZ, cmd)
+                    else:
+                        try:
+                            winreg.DeleteValue(key, "HytaleServerManager")
+                        except OSError:
+                            pass
+                    winreg.CloseKey(key)
+                except Exception as e:
+                    messagebox.showerror("Error", f"Failed to set registry key: {e}")
 
         def update_stats(self, status):
             state = status.get("state", "Unknown")
@@ -1652,6 +1688,10 @@ def print_help():
 
 def main():
     """Main entry point."""
+    if "--startup-delay" in sys.argv:
+        time.sleep(30)
+        sys.argv.remove("--startup-delay")
+
     # Cleanup temporary update files
     if os.path.exists("updater_installer.py"):
         try: os.remove("updater_installer.py")

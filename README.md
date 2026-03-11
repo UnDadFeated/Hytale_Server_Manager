@@ -6,7 +6,7 @@
   </p>
 
   <p>
-    <img alt="Version" src="https://img.shields.io/badge/version-3.7.9-blue.svg" />
+    <img alt="Version" src="https://img.shields.io/badge/version-3.8.0-blue.svg" />
     <img alt="Python" src="https://img.shields.io/badge/python-3.8%2B-blue.svg" />
     <img alt="Platform" src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey.svg" />
   </p>
@@ -25,6 +25,7 @@
 * ⏱️ **Scheduled Restarts:** Set specific intervals for automated, clean server reboots to prevent memory saturation and degradation over time.
 * 💾 **Automated World Backups:** Archives the local server world directory into a `.zip` file prior to initialization. Prevents catastrophic data loss.
 * 🚀 **Performance Optimization:** Automatically detects and enables the Java Ahead-Of-Time (`HytaleServer.aot`) cache, leading to dramatically faster startup times.
+* 🖥️ **Start with Windows:** On Windows, conveniently set the manager to launch automatically on system boot (with a 30s delay).
 * 💬 **Discord Integration:** Features integrated Discord Webhooks to instantly alert your community on server status changes (Startup, Shutdown, Crashes). Includes a basic threaded bot for chat commands.
 * 📡 **Background Polling:** In GUI mode, periodically scans for new official Hytale server versions every 30 minutes, downloading and replacing engine files as necessary.
 * 🐧 **Linux Native Support:** Includes utilities for installing the manager as a native systemd service, and for enabling cross-distribution desktop auto-start.
@@ -113,6 +114,7 @@ Changes made to the server logic are primarily driven by the `hsm.conf` JSON fla
 ```json
 {
   "manager_auto_update": true,
+  "start_with_windows": false,
   "check_updates": true,
   "auto_start": false,
   "server_memory": "8G",
@@ -134,4 +136,4 @@ Changes made to the server logic are primarily driven by the `hsm.conf` JSON fla
 
 ## 🏷️ Versioning
 
-**Current Version:** `3.7.9`
+**Current Version:** `3.8.0`
