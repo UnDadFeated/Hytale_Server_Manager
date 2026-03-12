@@ -23,7 +23,7 @@ if platform.system() == "Windows":
     # Also optionally use STARTUPINFO to hide things deeper if needed.
 else:
     CREATE_NO_WINDOW = 0
-__version__ = "3.8.1"
+__version__ = "3.8.2"
 
 
 
@@ -1208,8 +1208,11 @@ def run_console_mode():
         if not console:
              print(f"{timestamp} {message}")
         
-        with open(LOG_FILE, "a") as f:
-            f.write(f"{timestamp} {message}\n")
+        try:
+            with open(LOG_FILE, "a") as f:
+                f.write(f"{timestamp} {message}\n")
+        except OSError:
+            pass
     
     config = load_config()
     core = HytaleUpdaterCore(console_logger, input_callback=input, config=config)
@@ -1553,7 +1556,10 @@ def run_gui_mode():
             self.log_queue.put((f"{timestamp} {msg}\n", tag))
             if self.var_logging.get():
                 clean_msg = re.sub(r'\x1b\[[0-9;]*m', '', f"{timestamp} {msg}\n")
-                with open(LOG_FILE, "a", encoding="utf-8") as f: f.write(clean_msg)
+                try:
+                    with open(LOG_FILE, "a", encoding="utf-8") as f: f.write(clean_msg)
+                except OSError:
+                    pass
 
         def update_log_loop(self):
             while not self.log_queue.empty():
