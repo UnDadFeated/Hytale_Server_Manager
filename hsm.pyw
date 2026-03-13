@@ -23,7 +23,7 @@ if platform.system() == "Windows":
     # Also optionally use STARTUPINFO to hide things deeper if needed.
 else:
     CREATE_NO_WINDOW = 0
-__version__ = "3.8.2"
+__version__ = "3.8.3"
 
 
 
@@ -36,10 +36,15 @@ IS_WINDOWS = platform.system() == "Windows"
 UPDATER_EXECUTABLE = "hytale-downloader.exe" if IS_WINDOWS else "hytale-downloader"
 ASSETS_FILE = "Assets.zip"
 AOT_FILE = "HytaleServer.aot"
-LOG_FILE = "hsm.log"
-CONFIG_FILE = "hsm.conf"
 BACKUP_DIR = "universe/backups"
 WORLD_DIR = "universe/worlds"
+
+# Always resolve paths relative to the script's own directory.
+# This ensures the manager works correctly when launched by Windows at startup
+# (which sets CWD to System32 by default).
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+LOG_FILE = os.path.join(BASE_DIR, "hsm.log")
+CONFIG_FILE = os.path.join(BASE_DIR, "hsm.conf")
 
 try:
     from rich.console import Console
@@ -1689,6 +1694,11 @@ def print_help():
 
 def main():
     """Main entry point."""
+    # Always set the working directory to the script's own folder.
+    # This is critical when launched via the Windows registry (Start with Windows),
+    # which defaults the CWD to C:\Windows\System32.
+    os.chdir(BASE_DIR)
+
     if "--startup-delay" in sys.argv:
         time.sleep(30)
         sys.argv.remove("--startup-delay")
