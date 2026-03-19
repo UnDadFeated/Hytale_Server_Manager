@@ -23,7 +23,7 @@ if platform.system() == "Windows":
     # Also optionally use STARTUPINFO to hide things deeper if needed.
 else:
     CREATE_NO_WINDOW = 0
-__version__ = "3.8.4"
+__version__ = "3.8.5"
 
 
 
@@ -148,6 +148,7 @@ class HytaleUpdaterCore:
         self.discord_bot = None
 
         self._lifecycle_lock = threading.Lock()
+        self._starting = False
 
         if self.config.get("enable_discord", False) and HAS_DISCORD and self.config.get("discord_token"):
              self.start_discord_bot()
@@ -494,7 +495,7 @@ class HytaleUpdaterCore:
             
             if not remote_version:
                 self.log("Could not parse remote version.")
-                return
+                return False
 
             local_version = __version__
             
@@ -920,79 +921,86 @@ except Exception as e:
             if self.server_process and self.server_process.poll() is None:
                 self.log("Start requested but server is already running. Skipping.")
                 return
+            if getattr(self, '_starting', False):
+                self.log("Startup already in progress. Skipping.")
+                return
+            self._starting = True
             self.stop_requested = False
-        
-        # 1. Manager Update Check
-        if self.check_self_update():
-            self.run_update_installer()
-            return
-
-        # 2. Java Check
-        if not self.check_java_version(): return
-
-        # 3. Server Check (and Downloader)
-        if self.config.get("check_updates", True):
-            self.stop_existing_server_process() # Stop before update to be safe
-            self.update_server()
-
-        # 4. Assets Check
-        assets_path = self.check_assets()
-        if not assets_path: return
-
-        # Ensure server is stopped before start (redundant but safe if updates disabled)
-        self.stop_existing_server_process()
-
-        # 5. Backup World
-        self.backup_world()
-
-        self.log("Starting Server...")
-        self.send_discord_webhook("🟢 Hytale Server Starting...")
-
-        memory = self.config.get("server_memory", "4G")
-        
-        env = os.environ.copy()
-        env["_JAVA_OPTIONS"] = f"-Xmx{memory}"
-        
-        cmd = ["java", f"-Xmx{memory}"]
-        
-        custom_aot = self.config.get("server_aot", "")
-        if custom_aot and os.path.exists(custom_aot):
-             self.log(f"Using Custom AOT Cache: {custom_aot}")
-             cmd.append(f"-XX:AOTCache={custom_aot}")
-             
-        cmd.extend(["-jar", SERVER_JAR, "--assets", assets_path])
 
         try:
-            startupinfo = None
-            creationflags = 0
-            if IS_WINDOWS:
-                startupinfo = subprocess.STARTUPINFO()
-                startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-                startupinfo.wShowWindow = subprocess.SW_HIDE
-                creationflags = CREATE_NO_WINDOW
-            
-            self.server_process = subprocess.Popen(
-                cmd, env=env,
-                stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE,
-                startupinfo=startupinfo, creationflags=creationflags
-            )
-            self.start_time = datetime.datetime.now()
-            self.update_status({"state": "Running", "pid": self.server_process.pid})
+            # 1. Manager Update Check
+            if self.check_self_update():
+                self.run_update_installer()
+                return
 
-            threading.Thread(target=self._read_stream, args=(self.server_process.stdout, "stdout"), daemon=True).start()
-            threading.Thread(target=self._read_stream, args=(self.server_process.stderr, "stderr"), daemon=True).start()
-            
-            self.monitor_thread = threading.Thread(target=self._monitor_loop, daemon=True)
-            self.monitor_thread.start()
-            
-            self.start_update_checker()
+            # 2. Java Check
+            if not self.check_java_version(): return
 
-            if self.config.get("enable_schedule", False):
-                self._schedule_restart()
+            # 3. Server Check (and Downloader)
+            if self.config.get("check_updates", True):
+                self.stop_existing_server_process() # Stop before update to be safe
+                self.update_server()
 
-        except Exception as e:
-            self.log(f"Failed to start server: {e}")
-            self.update_status({"state": "Stopped"})
+            # 4. Assets Check
+            assets_path = self.check_assets()
+            if not assets_path: return
+
+            # Ensure server is stopped before start (redundant but safe if updates disabled)
+            self.stop_existing_server_process()
+
+            # 5. Backup World
+            self.backup_world()
+
+            self.log("Starting Server...")
+            self.send_discord_webhook("🟢 Hytale Server Starting...")
+
+            memory = self.config.get("server_memory", "4G")
+            
+            env = os.environ.copy()
+            env["_JAVA_OPTIONS"] = f"-Xmx{memory}"
+            
+            cmd = ["java", f"-Xmx{memory}"]
+            
+            custom_aot = self.config.get("server_aot", "")
+            if custom_aot and os.path.exists(custom_aot):
+                 self.log(f"Using Custom AOT Cache: {custom_aot}")
+                 cmd.append(f"-XX:AOTCache={custom_aot}")
+                 
+            cmd.extend(["-jar", SERVER_JAR, "--assets", assets_path])
+
+            try:
+                startupinfo = None
+                creationflags = 0
+                if IS_WINDOWS:
+                    startupinfo = subprocess.STARTUPINFO()
+                    startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+                    startupinfo.wShowWindow = subprocess.SW_HIDE
+                    creationflags = CREATE_NO_WINDOW
+                
+                self.server_process = subprocess.Popen(
+                    cmd, env=env,
+                    stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE,
+                    startupinfo=startupinfo, creationflags=creationflags
+                )
+                self.start_time = datetime.datetime.now()
+                self.update_status({"state": "Running", "pid": self.server_process.pid})
+
+                threading.Thread(target=self._read_stream, args=(self.server_process.stdout, "stdout"), daemon=True).start()
+                threading.Thread(target=self._read_stream, args=(self.server_process.stderr, "stderr"), daemon=True).start()
+                
+                self.monitor_thread = threading.Thread(target=self._monitor_loop, daemon=True)
+                self.monitor_thread.start()
+                
+                self.start_update_checker()
+
+                if self.config.get("enable_schedule", False):
+                    self._schedule_restart()
+
+            except Exception as e:
+                self.log(f"Failed to start server: {e}")
+                self.update_status({"state": "Stopped"})
+        finally:
+            self._starting = False
 
     def _read_stream(self, stream, tag):
         """Reads output from the server process stdout/stderr."""
