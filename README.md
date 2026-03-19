@@ -6,7 +6,7 @@
   </p>
 
   <p>
-    <img alt="Version" src="https://img.shields.io/badge/version-3.8.3-blue.svg" />
+    <img alt="Version" src="https://img.shields.io/badge/version-3.8.4-blue.svg" />
     <img alt="Python" src="https://img.shields.io/badge/python-3.8%2B-blue.svg" />
     <img alt="Platform" src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey.svg" />
   </p>
@@ -136,8 +136,9 @@ Changes made to the server logic are primarily driven by the `hsm.conf` JSON fla
 
 ## 🏷️ Versioning
 
-**Current Version:** `3.8.3`
+**Current Version:** `3.8.4`
 
 ### Changelog
 
-- **3.8.3** — Fixed: "Start with Windows" now correctly sets the working directory to the script's own folder. Windows launches registry startup entries from `C:\Windows\System32` by default, which caused `hsm.conf` and all other relative-path resources to not be found. The manager now always `chdir`s to its own directory on startup, and `hsm.conf`/`hsm.log` paths are resolved as absolute paths relative to the script.
+- **3.8.4** — General stability and compatibility release. Fixed `stop_server()` to wait for process exit, replaced deprecated `wmic` with PowerShell on Windows 11, fixed registry path corruption in autostart, and improved memory efficiency during updates. Added thread safety for server lifecycle and enhanced logging.
+- **3.8.3** — Fixed: "Start with Windows" now correctly sets the working directory... (rest of the text)

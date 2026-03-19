@@ -23,7 +23,7 @@ if platform.system() == "Windows":
     # Also optionally use STARTUPINFO to hide things deeper if needed.
 else:
     CREATE_NO_WINDOW = 0
-__version__ = "3.8.3"
+__version__ = "3.8.4"
 
 
 
@@ -147,6 +147,8 @@ class HytaleUpdaterCore:
         self.start_time = None
         self.discord_bot = None
 
+        self._lifecycle_lock = threading.Lock()
+
         if self.config.get("enable_discord", False) and HAS_DISCORD and self.config.get("discord_token"):
              self.start_discord_bot()
 
@@ -190,7 +192,7 @@ class HytaleUpdaterCore:
                 self.manager = manager_core
             
             async def on_ready(self):
-                print(f'Discord Bot logged in as {self.user}')
+                self.manager.log(f"Discord Bot logged in as {self.user}")
                 if channel_id:
                     channel = self.get_channel(int(channel_id))
                     if channel: await channel.send("🟢 **Hytale Manager Connected!**")
@@ -340,7 +342,8 @@ class HytaleUpdaterCore:
                 req = urllib.request.Request(UPDATER_ZIP_URL, headers={'User-Agent': 'Mozilla/5.0'})
                 with urllib.request.urlopen(req) as response:
                     with open(UPDATER_ZIP_FILE, "wb") as f:
-                        f.write(response.read())
+                        while chunk := response.read(65536):
+                            f.write(chunk)
             except Exception as e:
                  self.log(f"Download failed: {e}")
                  return None
@@ -359,6 +362,8 @@ class HytaleUpdaterCore:
             
             # Fallback scan
             for f in os.listdir('.'):
+                if not f.startswith("hytale-downloader"):
+                    continue
                 if "hytale-downloader" in f:
                     if f.endswith(".jar"): return ["java", "-jar", f]
                     if IS_WINDOWS and f.endswith(".exe"): return [f]
@@ -389,23 +394,24 @@ class HytaleUpdaterCore:
         if IS_WINDOWS:
             try:
                 kwargs = {}
-                if IS_WINDOWS:
-                    startupinfo = subprocess.STARTUPINFO()
-                    startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-                    startupinfo.wShowWindow = subprocess.SW_HIDE
-                    kwargs["startupinfo"] = startupinfo
-                    kwargs["creationflags"] = CREATE_NO_WINDOW
+                startupinfo = subprocess.STARTUPINFO()
+                startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+                startupinfo.wShowWindow = subprocess.SW_HIDE
+                kwargs["startupinfo"] = startupinfo
+                kwargs["creationflags"] = CREATE_NO_WINDOW
                 
-                cmd = 'wmic process where "name=\'java.exe\'" get commandline, processid'
+                cmd = (
+                    'powershell -NoProfile -Command "'
+                    'Get-WmiObject Win32_Process | '
+                    'Where-Object { $_.Name -eq \'java.exe\' -and $_.CommandLine -like \'*HytaleServer.jar*\' } | '
+                    'Select-Object -ExpandProperty ProcessId"'
+                )
                 result = subprocess.run(cmd, capture_output=True, text=True, shell=True, **kwargs)
                 for line in result.stdout.splitlines():
-                    if SERVER_JAR in line:
-                        parts = line.split()
-                        if parts:
-                            pid = parts[-1].strip()
-                            if pid.isdigit():
-                                self.log(f"Found running server (PID: {pid}). Stopping...")
-                                subprocess.run(f"taskkill /PID {pid} /F", shell=True, creationflags=CREATE_NO_WINDOW)
+                    pid = line.strip()
+                    if pid.isdigit():
+                        self.log(f"Found running server (PID: {pid}). Stopping...")
+                        subprocess.run(f"taskkill /PID {pid} /F", shell=True, creationflags=CREATE_NO_WINDOW)
             except Exception: pass
         else:
              try:
@@ -468,7 +474,7 @@ class HytaleUpdaterCore:
         it downloads the new script and launches a separate installer process.
         """
         if not self.config.get("manager_auto_update", True):
-             return
+             return False
 
         # Add cache buster
         ts = int(time.time())
@@ -898,7 +904,7 @@ except Exception as e:
         try:
             data = json.dumps({"content": message}).encode('utf-8')
             req = urllib.request.Request(url, data=data, headers={'Content-Type': 'application/json', 'User-Agent': 'HytaleUpdater'})
-            with urllib.request.urlopen(req) as r: pass
+            with urllib.request.urlopen(req, timeout=10) as r: pass
         except Exception as e:
             self.log(f"Discord Webhook Failed: {e}")
 
@@ -910,7 +916,11 @@ except Exception as e:
 
     def _start_server_thread(self):
         """Internal method to handle the server startup steps."""
-        self.stop_requested = False
+        with self._lifecycle_lock:
+            if self.server_process and self.server_process.poll() is None:
+                self.log("Start requested but server is already running. Skipping.")
+                return
+            self.stop_requested = False
         
         # 1. Manager Update Check
         if self.check_self_update():
@@ -991,8 +1001,10 @@ except Exception as e:
                 if line_bytes:
                     line = line_bytes.decode('utf-8', errors='replace').strip()
                     if line: self.log(line, tag)
-        except: pass
-        finally: stream.close()
+        except Exception as e:
+            self.log(f"Stream read error ({tag}): {e}", tag="stderr")
+        finally:
+            stream.close()
 
     def _monitor_loop(self):
         """Monitors the server process status."""
@@ -1106,9 +1118,14 @@ except Exception as e:
             try:
                 self.server_process.stdin.write(b"stop\n")
                 self.server_process.stdin.flush()
-            except:
-                if self.server_process: 
-                    self.server_process.kill()
+            except Exception:
+                pass
+            try:
+                self.server_process.wait(timeout=30)
+            except subprocess.TimeoutExpired:
+                self.log("Server did not stop in time. Killing process...")
+                self.server_process.kill()
+                self.server_process.wait()
     
     def _schedule_restart(self):
         """Schedules an automatic restart after a configured interval."""
@@ -1214,7 +1231,7 @@ def run_console_mode():
              print(f"{timestamp} {message}")
         
         try:
-            with open(LOG_FILE, "a") as f:
+            with open(LOG_FILE, "a", encoding="utf-8") as f:
                 f.write(f"{timestamp} {message}\n")
         except OSError:
             pass
@@ -1522,7 +1539,7 @@ def run_gui_mode():
                             if os.path.exists(possible_pythonw):
                                 python_exe = possible_pythonw
                             else:
-                                python_exe = python_exe.lower().replace("python.exe", "pythonw.exe")
+                                python_exe = os.path.join(os.path.dirname(python_exe), "pythonw.exe")
                         
                         cmd = f'"{python_exe}" "{script_path}" --startup-delay'
                         winreg.SetValueEx(key, "HytaleServerManager", 0, winreg.REG_SZ, cmd)
