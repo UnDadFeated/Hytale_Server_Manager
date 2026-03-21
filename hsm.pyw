@@ -23,7 +23,7 @@ if platform.system() == "Windows":
     # Also optionally use STARTUPINFO to hide things deeper if needed.
 else:
     CREATE_NO_WINDOW = 0
-__version__ = "3.8.5"
+__version__ = "3.9.0"
 
 
 
@@ -33,6 +33,8 @@ SERVER_JAR = "HytaleServer.jar"
 UPDATER_ZIP_URL = "https://downloader.hytale.com/hytale-downloader.zip"
 UPDATER_ZIP_FILE = "hytale-downloader.zip"
 IS_WINDOWS = platform.system() == "Windows"
+IS_DARWIN = platform.system() == "Darwin"
+IS_LINUX = platform.system() == "Linux"
 UPDATER_EXECUTABLE = "hytale-downloader.exe" if IS_WINDOWS else "hytale-downloader"
 ASSETS_FILE = "Assets.zip"
 AOT_FILE = "HytaleServer.aot"
@@ -305,7 +307,11 @@ class HytaleUpdaterCore:
         candidates = [UPDATER_EXECUTABLE]
         if IS_WINDOWS:
             candidates.append("hytale-downloader-windows-amd64.exe")
+        elif IS_DARWIN:
+            # Apple Silicon first, then Intel
+            candidates.extend(["hytale-downloader-darwin-arm64", "hytale-downloader-darwin-amd64"])
         else:
+            # Linux (including Arch)
             candidates.append("hytale-downloader-linux-amd64")
             
         for cand in candidates:
@@ -361,16 +367,20 @@ class HytaleUpdaterCore:
                         except: pass
                     return [f"./{cand}"] if not IS_WINDOWS else [cand]
             
-            # Fallback scan
+            # Fallback scan for any extracted binary
             for f in os.listdir('.'):
                 if not f.startswith("hytale-downloader"):
                     continue
-                if "hytale-downloader" in f:
-                    if f.endswith(".jar"): return ["java", "-jar", f]
-                    if IS_WINDOWS and f.endswith(".exe"): return [f]
-                    if not IS_WINDOWS and "." not in f:
+                if f.endswith(".jar"):
+                    return ["java", "-jar", f]
+                if IS_WINDOWS and f.endswith(".exe"):
+                    return [f]
+                if not IS_WINDOWS and "." not in f:
+                    try:
                         os.chmod(f, 0o755)
-                        return [f"./{f}"]
+                    except OSError:
+                        pass
+                    return [f"./{f}"]
             return None
         except Exception as e:
             self.log(f"Failed to download/extract updater: {e}")
@@ -1154,8 +1164,10 @@ except Exception as e:
 
 def install_service():
     """Installs the manager as a systemd service (Linux only)."""
-    if IS_WINDOWS:
-        print("Service installation is only supported on Linux.")
+    if not IS_LINUX:
+        print("Service installation requires Linux with systemd (e.g. Ubuntu, Arch, Fedora).")
+        if IS_DARWIN:
+            print("On macOS, use launchd or add to Login Items manually.")
         return
 
     if os.geteuid() != 0:
@@ -1195,7 +1207,10 @@ WantedBy=multi-user.target
 def enable_autostart():
     """Enables auto-start for the current user (Linux Desktop)."""
     if IS_WINDOWS:
-        print("Auto-start setup via CLI is currently Linux-only. On Windows, use the GUI option or Task Scheduler.")
+        print("Auto-start setup via CLI is Windows-only in GUI. Use the GUI 'Start with Windows' option.")
+        return
+    if IS_DARWIN:
+        print("macOS CLI autostart is not supported. Add the app to System Preferences > Users & Groups > Login Items.")
         return
 
     autostart_dir = os.path.expanduser("~/.config/autostart")
@@ -1260,275 +1275,309 @@ def run_console_mode():
 
 def run_gui_mode():
     """Starts the graphical user interface."""
-    import tkinter as tk
-    from tkinter import scrolledtext, messagebox, ttk, filedialog
+    from PySide6.QtWidgets import (
+        QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
+        QGridLayout, QGroupBox, QLabel, QPushButton, QCheckBox, QLineEdit,
+        QTextEdit, QPlainTextEdit, QFrame, QMessageBox, QFileDialog,
+    )
+    from PySide6.QtCore import Qt, QTimer, QUrl
+    from PySide6.QtGui import QPalette, QColor, QFont, QTextCursor, QTextCharFormat
 
-    class HytaleGUI:
-        """
-        Graphical User Interface for the Hytale Server Manager using Tkinter.
-        
-        Provides a user-friendly dashboard for controlling the server, editing configuration,
-        and viewing live console logs.
-        """
-        def __init__(self, root):
-            self.root = root
-            self.root.title(f"Hytale Server Manager v{__version__}")
-            
-            self.root.geometry("1080x800")
-            self.root.resizable(False, False)
-            self.root.state("normal")
+    class HytaleGUI(QMainWindow):
+        """Graphical User Interface for the Hytale Server Manager using PySide6."""
 
+        def __init__(self):
+            super().__init__()
+            self.setWindowTitle(f"Hytale Server Manager v{__version__}")
+            self.setFixedSize(920, 640)
             self.config = load_config()
             self.is_dark = self.config.get("dark_mode", True)
-            
-            self.var_logging = tk.BooleanVar(value=self.config.get("enable_logging", True))
-            self.var_check_upd = tk.BooleanVar(value=self.config.get("check_updates", True))
-            self.var_autostart = tk.BooleanVar(value=self.config.get("auto_start", False))
-            self.var_backup = tk.BooleanVar(value=self.config.get("enable_backups", True))
-            self.var_discord = tk.BooleanVar(value=self.config.get("enable_discord", False))
-            self.var_restart = tk.BooleanVar(value=self.config.get("enable_auto_restart", True))
-            self.var_schedule = tk.BooleanVar(value=self.config.get("enable_schedule", False))
-            self.var_discord_url = tk.StringVar(value=self.config.get("discord_webhook", ""))
-            self.var_discord_token = tk.StringVar(value=self.config.get("discord_token", ""))
-            self.var_discord_channel = tk.StringVar(value=str(self.config.get("discord_channel_id", 0)))
-            self.var_schedule_time = tk.StringVar(value=str(self.config.get("restart_interval", 12)))
-            self.var_memory = tk.StringVar(value=self.config.get("server_memory", "8G"))
-            self.var_aot = tk.StringVar(value=self.config.get("server_aot", ""))
-            self.var_max_backups = tk.StringVar(value=str(self.config.get("max_backups", 3)))
-            self.var_start_win = tk.BooleanVar(value=self.config.get("start_with_windows", False))
-            
-            self.var_memory.trace_add("write", self.on_config_change)
-            self.var_aot.trace_add("write", self.on_config_change)
-
-            self.status_var = tk.StringVar(value="Status: Stopped")
-            self.uptime_var = tk.StringVar(value="Uptime: 00:00:00")
 
             self.log_queue = queue.Queue()
             self.core = HytaleUpdaterCore(self.log_queue_wrapper, self.ask_file, self.config, self.update_stats)
 
             self.setup_ui()
             self.apply_theme()
-            self.update_log_loop()
 
-            if self.var_autostart.get():
-                self.root.after(1000, self.start_server)
+            self.log_timer = QTimer(self)
+            self.log_timer.timeout.connect(self.drain_log_queue)
+            self.log_timer.start(80)
 
-            # Bind close event
-            self.root.protocol("WM_DELETE_WINDOW", self.on_close)
+            if self.config.get("auto_start", False):
+                QTimer.singleShot(1000, self.start_server)
 
         def setup_ui(self):
-            header = ttk.Frame(self.root, padding="5")
-            header.pack(fill=tk.X)
-            
-            title = ttk.Label(header, text=f"Hytale Server Manager v{__version__}", font=("Segoe UI", 16, "bold"))
-            title.pack(side=tk.LEFT)
-            
-            desc = ttk.Label(header, text=" | Comprehensive Server Management Tool", font=("Segoe UI", 10))
-            desc.pack(side=tk.LEFT, padx=10, pady=(4,0))
-            
-            controls_frame = ttk.LabelFrame(self.root, text="Controls & Configuration", padding="5")
-            controls_frame.pack(fill=tk.X, padx=10, pady=2)
-            
-            left_container = ttk.Frame(controls_frame)
-            left_container.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+            cw = QWidget()
+            self.setCentralWidget(cw)
+            main = QVBoxLayout(cw)
+            main.setContentsMargins(8, 6, 8, 6)
+            main.setSpacing(4)
 
-            options_row = ttk.Frame(left_container)
-            options_row.pack(fill=tk.X, anchor="w")
+            header = QHBoxLayout()
+            title = QLabel(f"Hytale Server Manager v{__version__}")
+            title.setStyleSheet("font-weight: bold; font-size: 14px;")
+            header.addWidget(title)
+            header.addWidget(QLabel("| Comprehensive Server Management Tool"))
+            header.addStretch()
+            main.addLayout(header)
 
-            c_col1 = ttk.Frame(options_row)
-            c_col1.pack(side=tk.LEFT, fill=tk.Y, padx=(0, 20))
-            
-            ttk.Checkbutton(c_col1, text="Enable File Logging", variable=self.var_logging, command=self.save).pack(anchor="w")
-            ttk.Checkbutton(c_col1, text="Auto-Start Server", variable=self.var_autostart, command=self.save).pack(anchor="w")
-            ttk.Checkbutton(c_col1, text="Auto-Restart on Crash", variable=self.var_restart, command=self.save).pack(anchor="w")
+            controls = QGroupBox("Controls & Configuration")
+            controls_layout = QHBoxLayout(controls)
+            controls_layout.setSpacing(12)
 
-            mem_frame = ttk.Frame(c_col1)
-            mem_frame.pack(anchor="w", pady=2)
-            ttk.Label(mem_frame, text="Server RAM:").pack(side=tk.LEFT)
-            ttk.Entry(mem_frame, textvariable=self.var_memory, width=5).pack(side=tk.LEFT, padx=5)
-            self.lbl_reboot = ttk.Label(mem_frame, text="⚠ Reboot Required", foreground="orange")
-            
-            aot_frame = ttk.Frame(c_col1)
-            aot_frame.pack(anchor="w", fill=tk.X, pady=2)
-            ttk.Label(aot_frame, text="AOT:").pack(side=tk.LEFT)
-            ttk.Entry(aot_frame, textvariable=self.var_aot, width=10).pack(side=tk.LEFT, padx=5)
-            
-            def browse_aot():
-                path = filedialog.askopenfilename(filetypes=[("AOT Files", "*.aot"), ("All Files", "*.*")])
-                if path:
-                     self.var_aot.set(path)
-                     self.save()
-                     
-            ttk.Button(aot_frame, text="Browse", width=8, command=browse_aot).pack(side=tk.LEFT)
-            
-            c_col2 = ttk.Frame(options_row)
-            c_col2.pack(side=tk.LEFT, fill=tk.Y, padx=(0, 20))
-            
-            ttk.Checkbutton(c_col2, text="Check for new server updates", variable=self.var_check_upd, command=self.save).pack(anchor="w")
-            ttk.Label(c_col2, text="(Uncheck if modded)", font=("Segoe UI", 8), foreground="gray").pack(anchor="w", padx=(20, 0))
-            
-            bkp_frame = ttk.Frame(c_col2)
-            bkp_frame.pack(anchor="w")
-            ttk.Checkbutton(bkp_frame, text="Backup World on Start", variable=self.var_backup, command=self.save).pack(side=tk.LEFT)
-            ttk.Label(bkp_frame, text="Max:").pack(side=tk.LEFT, padx=(5,2))
-            ttk.Entry(bkp_frame, textvariable=self.var_max_backups, width=3).pack(side=tk.LEFT)
+            col1 = QVBoxLayout()
+            col1.setSpacing(2)
+            self.cb_logging = QCheckBox("Enable File Logging")
+            self.cb_logging.setChecked(self.config.get("enable_logging", True))
+            self.cb_logging.stateChanged.connect(self.save)
+            col1.addWidget(self.cb_logging)
+            self.cb_autostart = QCheckBox("Auto-Start Server")
+            self.cb_autostart.setChecked(self.config.get("auto_start", False))
+            self.cb_autostart.stateChanged.connect(self.save)
+            col1.addWidget(self.cb_autostart)
+            self.cb_restart = QCheckBox("Auto-Restart on Crash")
+            self.cb_restart.setChecked(self.config.get("enable_auto_restart", True))
+            self.cb_restart.stateChanged.connect(self.save)
+            col1.addWidget(self.cb_restart)
+            ram_row = QHBoxLayout()
+            ram_row.addWidget(QLabel("Server RAM:"))
+            self.entry_memory = QLineEdit()
+            self.entry_memory.setMaximumWidth(60)
+            self.entry_memory.setText(self.config.get("server_memory", "8G"))
+            self.entry_memory.textChanged.connect(self.on_config_change)
+            ram_row.addWidget(self.entry_memory)
+            self.lbl_reboot = QLabel("⚠ Reboot Required")
+            self.lbl_reboot.setStyleSheet("color: #ff9800;")
+            self.lbl_reboot.hide()
+            ram_row.addWidget(self.lbl_reboot)
+            ram_row.addStretch()
+            col1.addLayout(ram_row)
+            aot_row = QHBoxLayout()
+            aot_row.addWidget(QLabel("AOT:"))
+            self.entry_aot = QLineEdit()
+            self.entry_aot.setMaximumWidth(120)
+            self.entry_aot.setText(self.config.get("server_aot", ""))
+            self.entry_aot.textChanged.connect(self.on_config_change)
+            aot_row.addWidget(self.entry_aot)
+            btn_aot = QPushButton("Browse")
+            btn_aot.setMaximumWidth(70)
+            btn_aot.clicked.connect(self.browse_aot)
+            aot_row.addWidget(btn_aot)
+            col1.addLayout(aot_row)
+            controls_layout.addLayout(col1)
 
-            sch_frame = ttk.Frame(c_col2)
-            sch_frame.pack(anchor="w", pady=2)
-            ttk.Checkbutton(sch_frame, text="Schedule Restart (Hrs)", variable=self.var_schedule, command=self.save).pack(side=tk.LEFT)
-            ttk.Entry(sch_frame, textvariable=self.var_schedule_time, width=5).pack(side=tk.LEFT, padx=5)
+            col2 = QVBoxLayout()
+            col2.setSpacing(2)
+            self.cb_check_upd = QCheckBox("Check for new server updates")
+            self.cb_check_upd.setChecked(self.config.get("check_updates", True))
+            self.cb_check_upd.stateChanged.connect(self.save)
+            col2.addWidget(self.cb_check_upd)
+            col2.addWidget(QLabel("(Uncheck if modded)"))
+            bkp_row = QHBoxLayout()
+            self.cb_backup = QCheckBox("Backup World on Start")
+            self.cb_backup.setChecked(self.config.get("enable_backups", True))
+            self.cb_backup.stateChanged.connect(self.save)
+            bkp_row.addWidget(self.cb_backup)
+            bkp_row.addWidget(QLabel("Max:"))
+            self.entry_max_backups = QLineEdit()
+            self.entry_max_backups.setMaximumWidth(30)
+            self.entry_max_backups.setText(str(self.config.get("max_backups", 3)))
+            self.entry_max_backups.editingFinished.connect(self.save)
+            bkp_row.addWidget(self.entry_max_backups)
+            bkp_row.addStretch()
+            col2.addLayout(bkp_row)
+            sch_row = QHBoxLayout()
+            self.cb_schedule = QCheckBox("Schedule Restart (Hrs)")
+            self.cb_schedule.setChecked(self.config.get("enable_schedule", False))
+            self.cb_schedule.stateChanged.connect(self.save)
+            sch_row.addWidget(self.cb_schedule)
+            self.entry_schedule = QLineEdit()
+            self.entry_schedule.setMaximumWidth(45)
+            self.entry_schedule.setText(str(self.config.get("restart_interval", 12)))
+            self.entry_schedule.editingFinished.connect(self.save)
+            sch_row.addWidget(self.entry_schedule)
+            sch_row.addStretch()
+            col2.addLayout(sch_row)
+            controls_layout.addLayout(col2)
 
-            c_col3_center = ttk.Frame(options_row)
-            c_col3_center.pack(side=tk.LEFT, fill=tk.Y, padx=(0, 10))
+            dsc_box = QFrame()
+            dsc_box.setFrameShape(QFrame.StyledPanel)
+            dsc_layout = QVBoxLayout(dsc_box)
+            dsc_layout.setSpacing(2)
+            self.cb_discord = QCheckBox("Discord Integration")
+            self.cb_discord.setChecked(self.config.get("enable_discord", False))
+            self.cb_discord.stateChanged.connect(self.save)
+            dsc_layout.addWidget(self.cb_discord)
+            dsc_row1 = QHBoxLayout()
+            dsc_row1.addWidget(QLabel("Webhook:"))
+            self.entry_webhook = QLineEdit()
+            self.entry_webhook.setPlaceholderText("URL")
+            self.entry_webhook.setText(self.config.get("discord_webhook", ""))
+            self.entry_webhook.editingFinished.connect(self.save)
+            dsc_row1.addWidget(self.entry_webhook)
+            dsc_layout.addLayout(dsc_row1)
+            dsc_row2 = QHBoxLayout()
+            dsc_row2.addWidget(QLabel("Token:"))
+            self.entry_token = QLineEdit()
+            self.entry_token.setEchoMode(QLineEdit.Password)
+            self.entry_token.setText(self.config.get("discord_token", ""))
+            self.entry_token.editingFinished.connect(self.save)
+            dsc_row2.addWidget(self.entry_token)
+            dsc_layout.addLayout(dsc_row2)
+            dsc_row3 = QHBoxLayout()
+            dsc_row3.addWidget(QLabel("Channel:"))
+            self.entry_channel = QLineEdit()
+            self.entry_channel.setPlaceholderText("ID")
+            self.entry_channel.setText(str(self.config.get("discord_channel_id", 0)))
+            self.entry_channel.editingFinished.connect(self.save)
+            dsc_row3.addWidget(self.entry_channel)
+            dsc_layout.addLayout(dsc_row3)
+            controls_layout.addWidget(dsc_box)
 
-            dsc_frame = ttk.Frame(c_col3_center, padding=5, borderwidth=1, relief="solid")
-            dsc_frame.pack(anchor="w", pady=2, fill=tk.X)
-
-            ttk.Checkbutton(dsc_frame, text="Discord Integration", variable=self.var_discord, command=self.save).pack(anchor="w", pady=(0, 5))
-
-            def add_dsc_row(label_text, var, is_secure=False):
-                row = ttk.Frame(dsc_frame)
-                row.pack(fill=tk.X, pady=1)
-                ttk.Label(row, text=label_text, width=10).pack(side=tk.LEFT)
-                entry = ttk.Entry(row, textvariable=var, width=10, show="*" if is_secure else None)
-                entry.pack(side=tk.LEFT, fill=tk.X, expand=True)
-
-            add_dsc_row("Webhook:", self.var_discord_url)
-            add_dsc_row("Token:", self.var_discord_token, is_secure=True)
-            add_dsc_row("Channel:", self.var_discord_channel)
-
-            c_col3 = ttk.Frame(controls_frame)
-            c_col3.pack(side=tk.RIGHT, fill=tk.Y)
-            
             def open_dir(path):
                 try:
+                    from PySide6.QtGui import QDesktopServices
                     p = os.path.abspath(path)
-                    if not os.path.exists(p): os.makedirs(p)
-                    os.startfile(p) if IS_WINDOWS else subprocess.run(["xdg-open", p])
+                    if not os.path.exists(p):
+                        os.makedirs(p)
+                    QDesktopServices.openUrl(QUrl.fromLocalFile(p))
                 except Exception as e:
-                    messagebox.showerror("Error", f"Could not open directory: {e}")
+                    QMessageBox.critical(self, "Error", f"Could not open directory: {e}")
 
-            qa_buttons_frame = ttk.Frame(c_col3)
-            qa_buttons_frame.grid(row=0, column=0, sticky="n", padx=(0, 10), pady=0)
-            
-            action_buttons_frame = ttk.Frame(c_col3)
-            action_buttons_frame.grid(row=0, column=1, sticky="n", pady=0)
+            right_col = QVBoxLayout()
+            right_col.setSpacing(4)
+            qa_row = QHBoxLayout()
+            for lbl, path in [("Server", "."), ("Worlds", WORLD_DIR), ("Backups", BACKUP_DIR)]:
+                b = QPushButton(lbl)
+                b.setFixedWidth(72)
+                b.clicked.connect(lambda checked, p=path: open_dir(p))
+                qa_row.addWidget(b)
+            right_col.addLayout(qa_row)
+            self.btn_start = QPushButton("START SERVER")
+            self.btn_start.setFixedHeight(28)
+            self.btn_start.setStyleSheet("font-weight: bold; color: #107C10;")
+            self.btn_start.clicked.connect(self.start_server)
+            right_col.addWidget(self.btn_start)
+            self.btn_stop = QPushButton("STOP SERVER")
+            self.btn_stop.setFixedHeight(28)
+            self.btn_stop.setStyleSheet("font-weight: bold; color: #D13438;")
+            self.btn_stop.setEnabled(False)
+            self.btn_stop.clicked.connect(self.stop_server)
+            right_col.addWidget(self.btn_stop)
+            right_col.addWidget(QLabel(f"Version: {self.config.get('last_server_version', 'Unknown')}"))
+            stats_row = QHBoxLayout()
+            self.lbl_cpu = QLabel("CPU: 0%")
+            self.lbl_ram = QLabel("RAM: 0%")
+            stats_row.addWidget(self.lbl_cpu)
+            stats_row.addWidget(self.lbl_ram)
+            right_col.addLayout(stats_row)
+            self.lbl_status = QLabel("Status: Stopped")
+            self.lbl_status.setStyleSheet("font-weight: bold;")
+            right_col.addWidget(self.lbl_status)
+            self.lbl_uptime = QLabel("Uptime: 00:00:00")
+            right_col.addWidget(self.lbl_uptime)
+            right_col.addStretch()
+            controls_layout.addLayout(right_col)
 
-            ttk.Button(qa_buttons_frame, text="Server", width=10, command=lambda: open_dir(".")).pack(fill=tk.X, pady=1)
-            ttk.Button(qa_buttons_frame, text="Worlds", width=10, command=lambda: open_dir(WORLD_DIR)).pack(fill=tk.X, pady=1)
-            ttk.Button(qa_buttons_frame, text="Backups", width=10, command=lambda: open_dir(BACKUP_DIR)).pack(fill=tk.X, pady=1)
+            main.addWidget(controls)
 
-            self.btn_start = ttk.Button(action_buttons_frame, text="START SERVER", command=self.start_server, width=20, style="StartPulse.TButton")
-            self.btn_start.pack(pady=1)
-            self.btn_stop = ttk.Button(action_buttons_frame, text="STOP SERVER", command=self.stop_server, state=tk.DISABLED, width=20, style="StopAlert.TButton")
-            self.btn_stop.pack(pady=1)
-            
-            ttk.Label(action_buttons_frame, text=f"Version: {self.config.get('last_server_version', 'Unknown')}", font=("Consolas", 8), foreground="gray").pack(pady=(0, 2))
-            
-            self.cpu_var = tk.StringVar(value="CPU: 0%")
-            self.ram_var = tk.StringVar(value="RAM: 0%")
-            
-            stats_frame = ttk.Frame(action_buttons_frame)
-            stats_frame.pack()
-            ttk.Label(stats_frame, textvariable=self.cpu_var, font=("Consolas", 8), foreground="gray").pack(side=tk.LEFT, padx=(0, 10))
-            ttk.Label(stats_frame, textvariable=self.ram_var, font=("Consolas", 8), foreground="gray").pack(side=tk.LEFT)
+            self.console = QPlainTextEdit()
+            self.console.setReadOnly(True)
+            self.console.setFont(QFont("Consolas", 9))
+            self.console.setMaximumBlockCount(1000)
+            main.addWidget(self.console)
 
-            self.lbl_status = ttk.Label(c_col3, textvariable=self.status_var, font=("Consolas", 9, "bold"))
-            self.lbl_status.grid(row=1, column=0, pady=2)
-            
-            self.lbl_uptime = ttk.Label(c_col3, textvariable=self.uptime_var, font=("Consolas", 9))
-            self.lbl_uptime.grid(row=1, column=1, pady=2)
-            
-            self.console = scrolledtext.ScrolledText(self.root, font=("Consolas", 8), width=100, state=tk.DISABLED, relief="solid", borderwidth=1)
-            self.console.pack(fill=tk.BOTH, expand=True, padx=10, pady=(2, 0))
-            self.setup_tags()
+            cmd_row = QHBoxLayout()
+            cmd_row.addWidget(QLabel("Command:"))
+            self.entry_cmd = QLineEdit()
+            self.entry_cmd.setPlaceholderText("Enter server command...")
+            self.entry_cmd.returnPressed.connect(self.send_command_ui)
+            cmd_row.addWidget(self.entry_cmd)
+            main.addLayout(cmd_row)
 
-            input_frame = ttk.Frame(self.root)
-            input_frame.pack(fill=tk.X, padx=10, pady=(2, 5))
-            
-            ttk.Label(input_frame, text="Command:", font=("Consolas", 8, "bold")).pack(side=tk.LEFT, padx=(0, 5))
-            self.input_var = tk.StringVar()
-            self.entry_cmd = ttk.Entry(input_frame, textvariable=self.input_var, font=("Consolas", 8))
-            self.entry_cmd.pack(side=tk.LEFT, fill=tk.X, expand=True)
-            self.entry_cmd.bind("<Return>", lambda e: self.send_command_ui())
-            
-            footer = ttk.Frame(self.root, padding="10")
-            footer.pack(fill=tk.X)
-            
-            theme_btn = ttk.Button(footer, text="Toggle Theme", command=self.toggle_theme)
-            theme_btn.pack(side=tk.LEFT)
-            
-            self.var_mgr_update = tk.BooleanVar(value=self.config.get("manager_auto_update", True))
-            ttk.Checkbutton(footer, text="Auto-Update Manager", variable=self.var_mgr_update, command=self.save).pack(side=tk.LEFT, padx=10)
-            
-            self.var_start_win = tk.BooleanVar(value=self.config.get("start_with_windows", False))
-            cb_start_win = ttk.Checkbutton(footer, text="Start with Windows", variable=self.var_start_win, command=self.save_and_set_autostart)
-            cb_start_win.pack(side=tk.LEFT, padx=10)
+            footer = QHBoxLayout()
+            theme_btn = QPushButton("Toggle Theme")
+            theme_btn.clicked.connect(self.toggle_theme)
+            footer.addWidget(theme_btn)
+            self.cb_mgr_update = QCheckBox("Auto-Update Manager")
+            self.cb_mgr_update.setChecked(self.config.get("manager_auto_update", True))
+            self.cb_mgr_update.stateChanged.connect(self.save)
+            footer.addWidget(self.cb_mgr_update)
+            self.cb_start_win = QCheckBox("Start with Windows")
+            self.cb_start_win.setChecked(self.config.get("start_with_windows", False))
+            self.cb_start_win.stateChanged.connect(self.save_and_set_autostart)
             if not IS_WINDOWS:
-                cb_start_win.config(state=tk.DISABLED)
-            
-            donate_frame = ttk.Frame(footer)
-            donate_frame.pack(side=tk.RIGHT)
-            
-            ttk.Label(donate_frame, text="☕ Buy me a coffee:").pack(side=tk.LEFT, padx=5)
-            
-            def open_donation_link():
-                pp_url = "https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=jscheema@gmail.com&item_name=Hytale%20Server%20Updater&amount=5.00&currency_code=USD&lc=US"
-                try:
-                    with open(os.devnull, 'w') as null_err:
-                        with contextlib.redirect_stderr(null_err):
-                            success = webbrowser.open(pp_url)
-                    if not success:
-                        self.core.log_queue_wrapper(f"[Donate] Could not open browser. Please visit: {pp_url}")
-                except Exception as e:
-                    self.core.log_queue_wrapper(f"[Donate] Failed to open browser ({e}). Please visit: {pp_url}")
+                self.cb_start_win.setEnabled(False)
+            footer.addWidget(self.cb_start_win)
+            footer.addStretch()
+            footer.addWidget(QLabel("☕ Buy me a coffee:"))
+            btn_pp = QPushButton("PayPal ($5)")
+            btn_pp.clicked.connect(self.open_donation_link)
+            footer.addWidget(btn_pp)
+            main.addLayout(footer)
 
-            btn_pp = ttk.Button(donate_frame, text="PayPal ($5)", command=open_donation_link)
-            btn_pp.pack(side=tk.LEFT, padx=2)
+        def browse_aot(self):
+            path, _ = QFileDialog.getOpenFileName(self, "Select AOT File", "", "AOT Files (*.aot);;All Files (*)")
+            if path:
+                self.entry_aot.setText(path)
+                self.save()
+
+        def open_donation_link(self):
+            pp_url = "https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=jscheema@gmail.com&item_name=Hytale%20Server%20Updater&amount=5.00&currency_code=USD&lc=US"
+            try:
+                with open(os.devnull, "w") as null_err:
+                    with contextlib.redirect_stderr(null_err):
+                        success = webbrowser.open(pp_url)
+                if not success:
+                    self.core.log(f"[Donate] Could not open browser. Please visit: {pp_url}")
+            except Exception as e:
+                self.core.log(f"[Donate] Failed to open browser ({e}). Please visit: {pp_url}")
 
         def send_command_ui(self):
-            cmd = self.input_var.get().strip()
+            cmd = self.entry_cmd.text().strip()
             if cmd:
                 self.core.send_command(cmd)
-                self.input_var.set("")
-                self.entry_cmd.focus()
+                self.entry_cmd.clear()
+                self.entry_cmd.setFocus()
 
-        def on_config_change(self, *args):
+        def on_config_change(self):
             self.save()
-            if self.core.server_process:
-                 self.lbl_reboot.pack(side=tk.LEFT, padx=5)
+            if self.core.server_process and self.core.server_process.poll() is None:
+                self.lbl_reboot.show()
             else:
-                 self.lbl_reboot.pack_forget()
+                self.lbl_reboot.hide()
 
         def start_server(self):
-            self.lbl_reboot.pack_forget()
+            self.lbl_reboot.hide()
             self.save()
-            self.btn_start.config(state=tk.DISABLED)
-            self.btn_stop.config(state=tk.NORMAL)
+            self.btn_start.setEnabled(False)
+            self.btn_stop.setEnabled(True)
             self.core.start_server_sequence()
 
         def stop_server(self):
             self.core.stop_server()
-            self.btn_stop.config(state=tk.DISABLED)
+            self.btn_stop.setEnabled(False)
 
         def save(self):
+            ch = self.entry_channel.text().strip()
+            mb = self.entry_max_backups.text().strip()
             self.config.update({
-                "enable_logging": self.var_logging.get(),
-                "check_updates": self.var_check_upd.get(),
-                "auto_start": self.var_autostart.get(),
-                "enable_backups": self.var_backup.get(),
-                "enable_discord": self.var_discord.get(),
-                "enable_auto_restart": self.var_restart.get(),
-                "enable_schedule": self.var_schedule.get(),
-                "discord_webhook": self.var_discord_url.get(),
-                "discord_token": self.var_discord_token.get(),
-                "discord_channel_id": int(self.var_discord_channel.get()) if self.var_discord_channel.get().isdigit() else 0,
-                "restart_interval": self.var_schedule_time.get(),
-                "server_memory": self.var_memory.get(),
-                "server_aot": self.var_aot.get(),
-                "max_backups": int(self.var_max_backups.get()) if self.var_max_backups.get().isdigit() else 3,
-                "manager_auto_update": self.var_mgr_update.get(),
-                "start_with_windows": self.var_start_win.get()
+                "enable_logging": self.cb_logging.isChecked(),
+                "check_updates": self.cb_check_upd.isChecked(),
+                "auto_start": self.cb_autostart.isChecked(),
+                "enable_backups": self.cb_backup.isChecked(),
+                "enable_discord": self.cb_discord.isChecked(),
+                "enable_auto_restart": self.cb_restart.isChecked(),
+                "enable_schedule": self.cb_schedule.isChecked(),
+                "discord_webhook": self.entry_webhook.text(),
+                "discord_token": self.entry_token.text(),
+                "discord_channel_id": int(ch) if ch.isdigit() else 0,
+                "restart_interval": self.entry_schedule.text(),
+                "server_memory": self.entry_memory.text(),
+                "server_aot": self.entry_aot.text(),
+                "max_backups": int(mb) if mb.isdigit() else 3,
+                "manager_auto_update": self.cb_mgr_update.isChecked(),
+                "start_with_windows": self.cb_start_win.isChecked(),
             })
             self.core.config = self.config
             save_config(self.config)
@@ -1539,16 +1588,12 @@ def run_gui_mode():
                 try:
                     import winreg
                     key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Run", 0, winreg.KEY_SET_VALUE)
-                    if self.var_start_win.get():
+                    if self.cb_start_win.isChecked():
                         script_path = os.path.abspath(sys.argv[0])
                         python_exe = sys.executable
                         if "pythonw.exe" not in python_exe.lower():
-                            possible_pythonw = os.path.join(os.path.dirname(python_exe), "pythonw.exe")
-                            if os.path.exists(possible_pythonw):
-                                python_exe = possible_pythonw
-                            else:
-                                python_exe = os.path.join(os.path.dirname(python_exe), "pythonw.exe")
-                        
+                            pw = os.path.join(os.path.dirname(python_exe), "pythonw.exe")
+                            python_exe = pw if os.path.exists(pw) else pw
                         cmd = f'"{python_exe}" "{script_path}" --startup-delay'
                         winreg.SetValueEx(key, "HytaleServerManager", 0, winreg.REG_SZ, cmd)
                     else:
@@ -1558,109 +1603,97 @@ def run_gui_mode():
                             pass
                     winreg.CloseKey(key)
                 except Exception as e:
-                    messagebox.showerror("Error", f"Failed to set registry key: {e}")
+                    QMessageBox.critical(self, "Error", f"Failed to set registry key: {e}")
 
         def update_stats(self, status):
-            state = status.get("state", "Unknown")
-            
-            try:
-                cpu_load = psutil.cpu_percent(interval=None)
-                ram_load = psutil.virtual_memory().percent
-                self.root.after(0, lambda: self.cpu_var.set(f"CPU: {cpu_load}%"))
-                self.root.after(0, lambda: self.ram_var.set(f"RAM: {ram_load}%"))
-            except Exception:
-                pass
-                
-            if state == "Stopped":
-                 self.root.after(0, lambda: self.btn_start.config(state=tk.NORMAL))
-                 self.root.after(0, lambda: self.btn_stop.config(state=tk.DISABLED))
-                 self.root.after(0, lambda: self.status_var.set("Status: Stopped"))
-                 self.root.after(0, lambda: self.uptime_var.set("Uptime: 00:00:00"))
-            elif state == "Running":
-                 uptime = status.get("uptime", "00:00:00")
-                 self.root.after(0, lambda: self.status_var.set("Status: Running"))
-                 self.root.after(0, lambda: self.uptime_var.set(f"Uptime: {uptime}"))
+            def apply():
+                state = status.get("state", "Unknown")
+                try:
+                    cpu_load = psutil.cpu_percent(interval=None)
+                    ram_load = psutil.virtual_memory().percent
+                    self.lbl_cpu.setText(f"CPU: {cpu_load}%")
+                    self.lbl_ram.setText(f"RAM: {ram_load}%")
+                except Exception:
+                    pass
+                if state == "Stopped":
+                    self.btn_start.setEnabled(True)
+                    self.btn_stop.setEnabled(False)
+                    self.lbl_status.setText("Status: Stopped")
+                    self.lbl_uptime.setText("Uptime: 00:00:00")
+                elif state == "Running":
+                    self.lbl_status.setText("Status: Running")
+                    self.lbl_uptime.setText(f"Uptime: {status.get('uptime', '00:00:00')}")
+            QTimer.singleShot(0, apply)
 
         def log_queue_wrapper(self, msg, tag=None):
             timestamp = datetime.datetime.now().strftime("[%H:%M:%S]")
             self.log_queue.put((f"{timestamp} {msg}\n", tag))
-            if self.var_logging.get():
-                clean_msg = re.sub(r'\x1b\[[0-9;]*m', '', f"{timestamp} {msg}\n")
+            if self.cb_logging.isChecked():
+                clean_msg = re.sub(r"\x1b\[[0-9;]*m", "", f"{timestamp} {msg}\n")
                 try:
-                    with open(LOG_FILE, "a", encoding="utf-8") as f: f.write(clean_msg)
+                    with open(LOG_FILE, "a", encoding="utf-8") as f:
+                        f.write(clean_msg)
                 except OSError:
                     pass
 
-        def update_log_loop(self):
+        def drain_log_queue(self):
             while not self.log_queue.empty():
-                msg, tag = self.log_queue.get()
-                self.console.config(state=tk.NORMAL)
+                try:
+                    msg, tag = self.log_queue.get_nowait()
+                except queue.Empty:
+                    break
                 self.insert_colored(msg, tag)
-                
-                # Prevent memory leaks by limiting the buffer size
-                num_lines = float(self.console.index('end-1c'))
-                if num_lines > 1000:
-                    self.console.delete('1.0', '50.0')
-                
-                self.console.see(tk.END)
-                self.console.config(state=tk.DISABLED)
-            self.root.after(100, self.update_log_loop)
+                scrollbar = self.console.verticalScrollBar()
+                scrollbar.setValue(scrollbar.maximum())
 
         def insert_colored(self, text, tag):
-             parts = re.split(r'(\x1b\[[0-9;]*m)', text)
-             current_tag = tag if tag == "stderr" else None
-             for part in parts:
-                 if part.startswith('\x1b['):
-                     code = part.strip()[2:-1]
-                     if code == "0": current_tag = None
-                     elif code in ["31","91"]: current_tag = "red"
-                     elif code in ["32","92"]: current_tag = "green"
-                     elif code in ["33","93"]: current_tag = "yellow"
-                     elif code in ["36","96"]: current_tag = "cyan"
-                 else:
-                     if part: self.console.insert(tk.END, part, (current_tag,) if current_tag else ())
+            cursor = self.console.textCursor()
+            cursor.movePosition(QTextCursor.End)
+            parts = re.split(r"(\x1b\[[0-9;]*m)", text)
+            current_color = "#ff5555" if tag == "stderr" else None
+            for part in parts:
+                if part.startswith("\x1b["):
+                    raw = part.strip()
+                    code = raw[2:-1].split(";")[-1] if raw.endswith("m") and len(raw) > 2 else ""
+                    if code == "0":
+                        current_color = None
+                    elif code in ("31", "91"):
+                        current_color = "#ff5555"
+                    elif code in ("32", "92"):
+                        current_color = "#55ff55" if self.is_dark else "#00aa00"
+                    elif code in ("33", "93"):
+                        current_color = "#ffff55" if self.is_dark else "#aaaa00"
+                    elif code in ("36", "96"):
+                        current_color = "#55ffff" if self.is_dark else "#00aaaa"
+                else:
+                    if part:
+                        fmt = QTextCharFormat()
+                        if current_color:
+                            fmt.setForeground(QColor(current_color))
+                        cursor.setCharFormat(fmt)
+                        cursor.insertText(part)
 
         def ask_file(self, prompt):
-            return filedialog.askopenfilename(title=prompt, filetypes=[("Zip Files", "*.zip")])
-
-        def setup_tags(self):
-            self.console.tag_config("stderr", foreground="#ff5555")
-            self.console.tag_config("red", foreground="#ff5555")
-            self.console.tag_config("green", foreground="#55ff55" if self.is_dark else "#00aa00")
-            self.console.tag_config("yellow", foreground="#ffff55" if self.is_dark else "#aaaa00")
-            self.console.tag_config("cyan", foreground="#55ffff" if self.is_dark else "#00aaaa")
+            path, _ = QFileDialog.getOpenFileName(self, prompt, "", "Zip Files (*.zip);;All Files (*)")
+            return path or ""
 
         def apply_theme(self):
-            try:
-                import sv_ttk
-                if self.is_dark:
-                    sv_ttk.set_theme("dark")
-                else:
-                    sv_ttk.set_theme("light")
-                bg, fg = ("#1c1c1c", "#fafafa") if self.is_dark else ("#fafafa", "#1c1c1c")
-                txt_bg = "#0c0c0c"
-            except ImportError:
-                bg, fg = ("#1e1e1e", "#d4d4d4") if self.is_dark else ("#f0f0f0", "#000000")
-                txt_bg = "#0c0c0c"
-                
-                style = ttk.Style()
-                try: style.theme_use('clam')
-                except: pass
-                style.configure(".", background=bg, foreground=fg)
-                style.configure("TLabel", background=bg, foreground=fg)
-                style.configure("TFrame", background=bg)
-                style.configure("TLabelFrame", background=bg, foreground=fg)
-                style.configure("TButton", background="#3c3c3c" if self.is_dark else "#e0e0e0", foreground=fg, borderwidth=1)
-                style.map("TButton", background=[("active", "#0078d7")], foreground=[("active", "white")])
-                style.configure("TCheckbutton", background=bg, foreground=fg)
-                style.configure("TEntry", foreground="black", fieldbackground="white")
-                self.root.configure(bg=bg)
-            
-            style = ttk.Style()
-            style.configure("StartPulse.TButton", foreground="#107C10" if not self.is_dark else "#23D18B", font=("Segoe UI", 9, "bold"))
-            style.configure("StopAlert.TButton", foreground="#D13438" if not self.is_dark else "#F14C4C", font=("Segoe UI", 9, "bold"))
-            
-            self.console.config(bg=txt_bg, fg="#d4d4d4", insertbackground="#d4d4d4")
+            if self.is_dark:
+                bg, fg, txt_bg = "#1a1a1a", "#e0e0e0", "#0c0c0c"
+            else:
+                bg, fg, txt_bg = "#f5f5f5", "#1a1a1a", "#ffffff"
+            p = self.palette()
+            p.setColor(QPalette.Window, QColor(bg))
+            p.setColor(QPalette.WindowText, QColor(fg))
+            p.setColor(QPalette.Base, QColor(txt_bg))
+            p.setColor(QPalette.Text, QColor("#d4d4d4" if self.is_dark else "#1a1a1a"))
+            p.setColor(QPalette.Button, QColor("#2d2d2d" if self.is_dark else "#e0e0e0"))
+            p.setColor(QPalette.ButtonText, QColor(fg))
+            self.setPalette(p)
+            self.console.setStyleSheet(f"background-color: {txt_bg}; color: #d4d4d4; font-family: Consolas;")
+            if not self.is_dark:
+                self.btn_start.setStyleSheet("font-weight: bold; color: #107C10;")
+                self.btn_stop.setStyleSheet("font-weight: bold; color: #D13438;")
 
         def toggle_theme(self):
             self.is_dark = not self.is_dark
@@ -1668,20 +1701,30 @@ def run_gui_mode():
             self.apply_theme()
             self.save()
 
-        def on_close(self):
-            """Handles the window close event."""
-            if self.core.server_process:
-                if messagebox.askokcancel("Quit", "Server is running. Do you want to stop it and quit?"):
+        def closeEvent(self, event):
+            if self.core.server_process and self.core.server_process.poll() is None:
+                reply = QMessageBox.question(
+                    self, "Quit",
+                    "Server is running. Do you want to stop it and quit?",
+                    QMessageBox.Yes | QMessageBox.No, QMessageBox.No
+                )
+                if reply == QMessageBox.Yes:
                     self.core.stop_server()
-                    self.root.destroy()
-                    sys.exit(0)
+                    event.accept()
+                    QApplication.quit()
+                else:
+                    event.ignore()
             else:
-                self.root.destroy()
-                sys.exit(0)
+                event.accept()
+                QApplication.quit()
 
-    root = tk.Tk()
-    app = HytaleGUI(root)
-    root.mainloop()
+    app = QApplication.instance()
+    if app is None:
+        app = QApplication(sys.argv)
+    app.setStyle("Fusion")
+    window = HytaleGUI()
+    window.show()
+    sys.exit(app.exec())
 
 def print_help():
     """Prints the help message."""
@@ -1755,9 +1798,8 @@ def main():
         try:
             run_gui_mode()
         except ImportError:
-            print("GUI libraries not found.")
-            if not IS_WINDOWS:
-                print("On Linux, try installing python3-tk (e.g., 'sudo apt install python3-tk').")
+            print("GUI libraries not found (PySide6 required).")
+            print("Install with: pip install PySide6")
             print("Falling back to console mode...")
             run_console_mode()
         except Exception:

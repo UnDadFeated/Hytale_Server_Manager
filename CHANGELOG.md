@@ -1,0 +1,10 @@
+# Changelog
+
+## 3.9.0 (2025-03-21)
+
+- **feat:** Cross-platform support: Windows, Linux, Arch Linux, macOS with platform-specific handling
+- **feat:** Migrate GUI from Tkinter to PySide6 for improved cross-platform appearance and stability
+- **refactor:** Replace tkinter/ttk widgets with Qt equivalents; apply Fusion style with dark/light palette
+- **fix:** Correct donate handler to use core.log() instead of non-existent log_queue_wrapper attribute
+- **fix:** Ensure thread-safe UI updates from background monitor via QTimer.singleShot
+- **build:** Add requirements.txt with psutil and PySide6 dependencies

@@ -6,9 +6,9 @@
   </p>
 
   <p>
-    <img alt="Version" src="https://img.shields.io/badge/version-3.8.5-blue.svg" />
+    <img alt="Version" src="https://img.shields.io/badge/version-3.9.0-blue.svg" />
     <img alt="Python" src="https://img.shields.io/badge/python-3.8%2B-blue.svg" />
-    <img alt="Platform" src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey.svg" />
+    <img alt="Platform" src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20Arch%20%7C%20macOS-lightgrey.svg" />
   </p>
 </div>
 
@@ -38,15 +38,19 @@
 
 | Requirement | Details |
 | :--- | :--- |
-| **Operating System** | Windows, Linux, or macOS |
+| **Operating System** | Windows, Linux (incl. Arch), macOS |
 | **Memory** | At least `4G` allocated to the server heap (`8G` recommended) |
 | **Java Environment** | **Java 25 or higher is strictly required.** [Download from Adoptium](https://adoptium.net/temurin/releases/?version=25) |
-| **Python** | Python 3.8 or higher + `psutil` module |
+| **Python** | Python 3.8+ with `psutil` and `PySide6` |
 
-#### OS-Specific Python Setup
+#### OS-Specific Setup
 
-* **Windows:** [Download from Python.org](https://www.python.org/downloads/windows/). Ensure the installer box "Add Python to PATH" is checked. Run `pip install psutil`.
-* **Linux:** Usually pre-installed. For the GUI to function, you may need to install the Tk UI library alongside `psutil` (`sudo apt install python3 python3-tk python3-psutil`).
+| Platform | Install Dependencies | GUI | Notes |
+|----------|----------------------|-----|-------|
+| **Windows** | `pip install -r requirements.txt` | Yes | Add Python to PATH. Double-click `hsm.pyw` or use `pythonw hsm.pyw` for silent launch. |
+| **Linux** (Ubuntu, Debian, etc.) | `pip install -r requirements.txt` | Yes | `sudo apt install python3 python3-pip` if needed. |
+| **Arch Linux** | `pip install -r requirements.txt` or `pacman -S python-psutil pypi-pyside6` | Yes | PySide6: `pip install PySide6` or use AUR `python-pyside6`. |
+| **macOS** | `pip install -r requirements.txt` | Yes | Use system Python or [python.org](https://www.python.org/downloads/macos/) build. Apple Silicon and Intel supported. |
 
 ---
 
@@ -54,9 +58,10 @@
 
 1. **Clone the Repository:** Download the repository source code, or grab the latest standalone `hsm.pyw` script.
 2. **Locate Server Path:** Move the python script into the root directory where you intend to run (or are currently running) your Hytale dedicated server.
-3. **Run Application:** 
-   - **Windows:** Simply double-click `hsm.pyw` to launch the manager silently in the background (using `pythonw.exe`). No console window will appear!
-   - **Linux / macOS:** Launch the script via your command line interface or right-click and run it normally.
+3. **Run Application:**
+   - **Windows:** Double-click `hsm.pyw` (launches with `pythonw.exe`, no console). Or run `python hsm.pyw` in a terminal.
+   - **Linux / Arch:** `python3 hsm.pyw` or `python hsm.pyw`
+   - **macOS:** `python3 hsm.pyw` or `python hsm.pyw`
 
 ---
 
@@ -72,7 +77,7 @@ python3 hsm.pyw
 
 *(Note: On Windows, opening `hsm.pyw` with `pythonw.exe` hides the background console).*
 
-* **Unified Flat Design:** A streamlined, column-based layout that displays all server controls, metrics, and configurations at a glance—no tab switching required.
+* **Unified Flat Design:** A streamlined PySide6 Qt interface with a column-based layout that displays all server controls, metrics, and configurations at a glance—no tab switching required.
 * **Real-time Output:** View live stdout and stderr streams directly in the expanded application console pane, optimized to prevent line wrapping for better readability.
 * **Visual Configurations:** Toggle crucial behaviors like Backups, Discord Webhooks, and Auto-Restart intervals directly through application checkboxes.
 * **Path Shortcuts:** Provides native file-explorer context buttons to rapidly open your Server Root, Worlds directory, and Backups archive.
@@ -80,30 +85,28 @@ python3 hsm.pyw
 
 ### Headless Console Mode
 
-Targeting headless environments, the application can bypass the `tkinter` dependency completely. All required values are read directly from `hsm.conf` upon boot sequence.
+Targeting headless environments, the application can bypass the PySide6 GUI dependency completely. All required values are read directly from `hsm.conf` upon boot sequence.
 
 ```bash
 python3 hsm.pyw -nogui
 ```
 
-### Advanced Linux Utilities
+### Platform-Specific Utilities
 
-The script provides CLI parameters to integrate seamlessly with various Linux distribution paradigms.
-
-**Installing as a Background Service:**
-Deploys `hsm.pyw` into a systemd service struct, enabling it to run entirely in the background and auto-boot alongside the machine.
+**Linux & Arch Linux (systemd):**
 
 ```bash
+# Install as a background service
 sudo python3 hsm.pyw -install-service
 sudo systemctl start hytale-manager
-```
 
-**Installing for Desktop Auto-Start:**
-Creates a `.desktop` launch hook that executes upon the current user logging into a graphical desktop environment.
-
-```bash
+# Add to desktop autostart
 python3 hsm.pyw -enable-autostart
 ```
+
+**Windows:** Use the GUI "Start with Windows" checkbox to add to registry autostart.
+
+**macOS:** CLI autostart is not supported. Add to **System Preferences → Users & Groups → Login Items** manually.
 
 ---
 
@@ -136,10 +139,11 @@ Changes made to the server logic are primarily driven by the `hsm.conf` JSON fla
 
 ## 🏷️ Versioning
 
-**Current Version:** `3.8.5`
+**Current Version:** `3.9.0`
 
 ### Changelog
 
+- **3.9.0** — GUI migrated from Tkinter to PySide6; professional fixed-size layout; Fusion style with dark/light themes.
 - **3.8.5** — Fixed an edge case where `check_self_update()` could still return `None` on parse failure. Strengthened the server startup lifecycle lock with an atomic `_starting` flag to prevent redundant process spawns during rapid-fire start requests.
 - **3.8.4** — General stability and compatibility release. Fixed `stop_server()` to wait for process exit, replaced deprecated `wmic` with PowerShell on Windows 11, fixed registry path corruption in autostart, and improved memory efficiency during updates. Added thread safety for server lifecycle and enhanced logging.
 - **3.8.3** — Fixed: "Start with Windows" now correctly sets the working directory... (rest of the text)
