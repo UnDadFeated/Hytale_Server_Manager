@@ -1,8 +1,29 @@
 import os
 import sys
+import datetime
+
+_script_dir = os.path.dirname(os.path.abspath(__file__))
+DEBUG_LOG = os.path.join(_script_dir, "debug.log")
+_debug_handle = None
+
+def _debug(event, msg):
+    """Write timestamped debug event to debug.log (overwritten each launch)."""
+    global _debug_handle
+    try:
+        ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+        line = f"[{ts}] [{event}] {msg}\n"
+        if _debug_handle is None:
+            _debug_handle = open(DEBUG_LOG, "w", encoding="utf-8")
+        _debug_handle.write(line)
+        _debug_handle.flush()
+    except Exception:
+        pass
+
+_debug("START", f"Process started | PID={os.getpid()} | argv={sys.argv!r} | cwd={os.getcwd()}")
+_debug("START", f"executable={sys.executable} | pythonw={('pythonw' in sys.executable.lower())}")
+
 import subprocess
 import time
-import datetime
 import shutil
 import urllib.request
 import zipfile
@@ -15,7 +36,14 @@ import json
 import traceback
 import webbrowser
 import contextlib
-import psutil
+
+_debug("IMPORT", "core stdlib imports done")
+try:
+    import psutil
+    _debug("IMPORT", "psutil OK")
+except ImportError as e:
+    _debug("IMPORT", f"psutil FAIL: {e}")
+    raise
 
 # Windows flag for hiding child console windows.
 if platform.system() == "Windows":
@@ -23,7 +51,7 @@ if platform.system() == "Windows":
     # Also optionally use STARTUPINFO to hide things deeper if needed.
 else:
     CREATE_NO_WINDOW = 0
-__version__ = "3.9.1"
+__version__ = "3.9.3"
 
 
 
@@ -35,6 +63,7 @@ UPDATER_ZIP_FILE = "hytale-downloader.zip"
 IS_WINDOWS = platform.system() == "Windows"
 IS_DARWIN = platform.system() == "Darwin"
 IS_LINUX = platform.system() == "Linux"
+IS_PYTHONW = IS_WINDOWS and "pythonw" in sys.executable.lower()
 UPDATER_EXECUTABLE = "hytale-downloader.exe" if IS_WINDOWS else "hytale-downloader"
 ASSETS_FILE = "Assets.zip"
 AOT_FILE = "HytaleServer.aot"
@@ -48,18 +77,16 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 LOG_FILE = os.path.join(BASE_DIR, "hsm.log")
 CONFIG_FILE = os.path.join(BASE_DIR, "hsm.conf")
 
-try:
-    from rich.console import Console
-    console = Console()
-except ImportError:
-    console = None
+console = None  # No rich; pythonw has no console
 
 try:
     import discord
     from discord.ext import commands
     HAS_DISCORD = True
+    _debug("IMPORT", "discord OK")
 except ImportError:
     HAS_DISCORD = False
+    _debug("IMPORT", "discord skip (optional)")
 
 def validate_config(config):
     """
@@ -163,15 +190,7 @@ class HytaleUpdaterCore:
             message (str): The message to log.
             tag (str, optional): A tag for categorization (e.g., 'stderr', 'error').
         """
-        # Fallback to standard logging callback
         self.log_callback(message, tag)
-        
-        # Also log to rich console if in console mode
-        if console and not tag:
-             # If the message doesn't have a timestamp, add one for console
-             if not message.startswith("["):
-                 ts = datetime.datetime.now().strftime("[%H:%M:%S]")
-                 console.log(f"{ts} {message}")
 
     def update_status(self, status):
         """Updates the status via the callback."""
@@ -609,7 +628,8 @@ try:
     
 except Exception as e:
     print(f"Update failed: {{e}}")
-    input("Press Enter to exit...")
+    if "pythonw" not in sys.executable.lower():
+        input("Press Enter to exit...")
 '''
 
 
@@ -1245,8 +1265,7 @@ def run_console_mode():
             message (str): The log message.
             tag (str, optional): The log tag (e.g., 'stderr').
         """
-        # Core log handles rich output if available. 
-        # This callback is primarily for file logging and fallback print.
+        # File logging and fallback print (when run with python, not pythonw).
         timestamp = datetime.datetime.now().strftime("[%Y-%m-%d %H:%M:%S]")
         
         # Only print if rich console is NOT active to avoid double printing
@@ -1275,27 +1294,40 @@ def run_console_mode():
 
 def run_gui_mode():
     """Starts the graphical user interface."""
+    _debug("GUI", "run_gui_mode() entered")
+    _debug("GUI", "importing PySide6.QtWidgets...")
     from PySide6.QtWidgets import (
         QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
         QGridLayout, QGroupBox, QLabel, QPushButton, QCheckBox, QLineEdit,
         QTextEdit, QPlainTextEdit, QFrame, QMessageBox, QFileDialog,
     )
+    _debug("GUI", "PySide6.QtWidgets OK")
+    _debug("GUI", "importing PySide6.QtCore...")
     from PySide6.QtCore import Qt, QTimer, QUrl
+    _debug("GUI", "PySide6.QtCore OK")
+    _debug("GUI", "importing PySide6.QtGui...")
     from PySide6.QtGui import QPalette, QColor, QFont, QTextCursor, QTextCharFormat
+    _debug("GUI", "PySide6.QtGui OK")
 
     class HytaleGUI(QMainWindow):
         """Graphical User Interface for the Hytale Server Manager using PySide6."""
 
         def __init__(self):
+            _debug("GUI", "HytaleGUI.__init__ started")
             super().__init__()
             self.setWindowTitle(f"Hytale Server Manager v{__version__}")
             self.setFixedSize(1080, 800)
+            _debug("GUI", "loading config...")
             self.config = load_config()
             self.is_dark = self.config.get("dark_mode", True)
+            _debug("GUI", "config OK")
 
             self.log_queue = queue.Queue()
+            _debug("GUI", "creating HytaleUpdaterCore...")
             self.core = HytaleUpdaterCore(self.log_queue_wrapper, self.ask_file, self.config, self.update_stats)
+            _debug("GUI", "core OK")
 
+            _debug("GUI", "setup_ui...")
             self.setup_ui()
             self.apply_theme()
 
@@ -1305,6 +1337,7 @@ def run_gui_mode():
 
             if self.config.get("auto_start", False):
                 QTimer.singleShot(1000, self.start_server)
+            _debug("GUI", "HytaleGUI.__init__ done")
 
         def setup_ui(self):
             cw = QWidget()
@@ -1741,12 +1774,17 @@ def run_gui_mode():
                 event.accept()
                 QApplication.quit()
 
+    _debug("GUI", "creating QApplication...")
     app = QApplication.instance()
     if app is None:
         app = QApplication(sys.argv)
+    _debug("GUI", f"QApplication OK | style=Fusion")
     app.setStyle("Fusion")
+    _debug("GUI", "creating HytaleGUI window...")
     window = HytaleGUI()
+    _debug("GUI", "calling window.show()...")
     window.show()
+    _debug("GUI", "entering app.exec() event loop")
     sys.exit(app.exec())
 
 def print_help():
@@ -1785,14 +1823,18 @@ def print_help():
 
 def main():
     """Main entry point."""
+    _debug("MAIN", "entering main()")
     # Always set the working directory to the script's own folder.
     # This is critical when launched via the Windows registry (Start with Windows),
     # which defaults the CWD to C:\Windows\System32.
     os.chdir(BASE_DIR)
+    _debug("MAIN", f"chdir to BASE_DIR={BASE_DIR}")
 
     if "--startup-delay" in sys.argv:
+        _debug("MAIN", "startup-delay: sleeping 30s")
         time.sleep(30)
         sys.argv.remove("--startup-delay")
+        _debug("MAIN", "startup-delay done")
 
     # Cleanup temporary update files
     if os.path.exists("updater_installer.py"):
@@ -1805,33 +1847,56 @@ def main():
              except: pass
 
     if "-help" in sys.argv or "--help" in sys.argv:
+        _debug("MAIN", "print_help and exit")
         print_help()
 
     if "-install-service" in sys.argv:
+        _debug("MAIN", "install-service")
         install_service()
         sys.exit(0)
 
     if "-enable-autostart" in sys.argv:
+        _debug("MAIN", "enable-autostart")
         enable_autostart()
         sys.exit(0)
 
     if "-nogui" in sys.argv:
+        _debug("MAIN", "starting console mode")
         run_console_mode()
     else:
+        _debug("MAIN", "starting GUI mode")
         try:
             run_gui_mode()
-        except ImportError:
-            print("GUI libraries not found (PySide6 required).")
-            print("Install with: pip install PySide6")
-            print("Falling back to console mode...")
-            run_console_mode()
-        except Exception:
-             traceback.print_exc()
-             input("GUI Start Failed! Press Enter to exit...")
+            _debug("MAIN", "run_gui_mode returned (app exited normally)")
+        except ImportError as e:
+            _debug("GUI", f"ImportError: {e}")
+            if not IS_PYTHONW:
+                traceback.print_exc()
+                print("GUI libraries not found (PySide6 required).")
+                print("Install with: pip install PySide6")
+                print("Falling back to console mode...")
+                run_console_mode()
+            else:
+                sys.exit(1)
+        except Exception as e:
+            _debug("GUI", f"Exception: {e}\n{traceback.format_exc()}")
+            if not IS_PYTHONW:
+                traceback.print_exc()
+                input("GUI Start Failed! Press Enter to exit...")
+            else:
+                sys.exit(1)
 
 if __name__ == "__main__":
     try:
+        _debug("MAIN", "__main__ block entered, calling main()")
         main()
-    except Exception:
-        traceback.print_exc()
-        input("Critical Crash! Press Enter to exit...")
+        _debug("MAIN", "main() returned normally")
+    except Exception as e:
+        _debug("CRASH", f"Unhandled: {e}\n{traceback.format_exc()}")
+        if not IS_PYTHONW:
+            try:
+                traceback.print_exc()
+                input("Critical Crash! Press Enter to exit...")
+            except Exception:
+                pass
+        sys.exit(1)

@@ -6,7 +6,7 @@
   </p>
 
   <p>
-    <img alt="Version" src="https://img.shields.io/badge/version-3.9.1-blue.svg" />
+    <img alt="Version" src="https://img.shields.io/badge/version-3.9.3-blue.svg" />
     <img alt="Python" src="https://img.shields.io/badge/python-3.8%2B-blue.svg" />
     <img alt="Platform" src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20Arch%20%7C%20macOS-lightgrey.svg" />
   </p>
@@ -139,11 +139,13 @@ Changes made to the server logic are primarily driven by the `hsm.conf` JSON fla
 
 ## 🏷️ Versioning
 
-**Current Version:** `3.9.1`
+**Current Version:** `3.9.3`
 
 ### Changelog
 
-- **3.9.1** — Restore Tkinter-like compact layout: 1080×800 window, dense controls, large central console, command input at bottom.
+- **3.9.3** — Remove rich; pythonw-friendly exception handling (no input hang).
+- **3.9.2** — debug.log on startup for launch diagnostics.
+- **3.9.1** — Restore compact layout: 1080×800, dense controls, large console.
 - **3.9.0** — GUI migrated from Tkinter to PySide6; professional fixed-size layout; Fusion style with dark/light themes.
 - **3.8.5** — Fixed an edge case where `check_self_update()` could still return `None` on parse failure. Strengthened the server startup lifecycle lock with an atomic `_starting` flag to prevent redundant process spawns during rapid-fire start requests.
 - **3.8.4** — General stability and compatibility release. Fixed `stop_server()` to wait for process exit, replaced deprecated `wmic` with PowerShell on Windows 11, fixed registry path corruption in autostart, and improved memory efficiency during updates. Added thread safety for server lifecycle and enhanced logging.
