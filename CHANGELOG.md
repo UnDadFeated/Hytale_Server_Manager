@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.9.1 (2025-03-21)
+
+- **fix:** Restore Tkinter-like compact layout: 1080x800 window, dense controls, large central console, command input at bottom
+
 ## 3.9.0 (2025-03-21)
 
 - **feat:** Cross-platform support: Windows, Linux, Arch Linux, macOS with platform-specific handling

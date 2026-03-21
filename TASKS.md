@@ -13,6 +13,7 @@
 - [x] Linux/Arch install-service and enable-autostart utilities
 - [x] macOS-friendly messaging for unsupported CLI autostart
 - [x] Update README with OS-specific installation and run instructions
+- [x] Restore compact Tkinter-like layout (1080×800, dense controls, large console, command input at bottom)
 
 ## Backlog
 

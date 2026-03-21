@@ -23,7 +23,7 @@ if platform.system() == "Windows":
     # Also optionally use STARTUPINFO to hide things deeper if needed.
 else:
     CREATE_NO_WINDOW = 0
-__version__ = "3.9.0"
+__version__ = "3.9.1"
 
 
 
@@ -1289,7 +1289,7 @@ def run_gui_mode():
         def __init__(self):
             super().__init__()
             self.setWindowTitle(f"Hytale Server Manager v{__version__}")
-            self.setFixedSize(920, 640)
+            self.setFixedSize(1080, 800)
             self.config = load_config()
             self.is_dark = self.config.get("dark_mode", True)
 
@@ -1310,23 +1310,25 @@ def run_gui_mode():
             cw = QWidget()
             self.setCentralWidget(cw)
             main = QVBoxLayout(cw)
-            main.setContentsMargins(8, 6, 8, 6)
-            main.setSpacing(4)
+            main.setContentsMargins(6, 4, 6, 4)
+            main.setSpacing(2)
 
             header = QHBoxLayout()
             title = QLabel(f"Hytale Server Manager v{__version__}")
-            title.setStyleSheet("font-weight: bold; font-size: 14px;")
+            title.setStyleSheet("font-weight: bold; font-size: 13px;")
             header.addWidget(title)
-            header.addWidget(QLabel("| Comprehensive Server Management Tool"))
+            header.addWidget(QLabel(" | Comprehensive Server Management Tool"))
             header.addStretch()
             main.addLayout(header)
 
             controls = QGroupBox("Controls & Configuration")
+            controls.setStyleSheet("QGroupBox { font-weight: bold; padding-top: 4px; margin-top: 4px; }")
             controls_layout = QHBoxLayout(controls)
-            controls_layout.setSpacing(12)
+            controls_layout.setContentsMargins(6, 10, 6, 6)
+            controls_layout.setSpacing(16)
 
             col1 = QVBoxLayout()
-            col1.setSpacing(2)
+            col1.setSpacing(0)
             self.cb_logging = QCheckBox("Enable File Logging")
             self.cb_logging.setChecked(self.config.get("enable_logging", True))
             self.cb_logging.stateChanged.connect(self.save)
@@ -1367,12 +1369,14 @@ def run_gui_mode():
             controls_layout.addLayout(col1)
 
             col2 = QVBoxLayout()
-            col2.setSpacing(2)
+            col2.setSpacing(0)
             self.cb_check_upd = QCheckBox("Check for new server updates")
             self.cb_check_upd.setChecked(self.config.get("check_updates", True))
             self.cb_check_upd.stateChanged.connect(self.save)
             col2.addWidget(self.cb_check_upd)
-            col2.addWidget(QLabel("(Uncheck if modded)"))
+            mod_lbl = QLabel("(Uncheck if modded)")
+            mod_lbl.setStyleSheet("font-size: 10px; color: grey;")
+            col2.addWidget(mod_lbl)
             bkp_row = QHBoxLayout()
             self.cb_backup = QCheckBox("Backup World on Start")
             self.cb_backup.setChecked(self.config.get("enable_backups", True))
@@ -1402,8 +1406,10 @@ def run_gui_mode():
 
             dsc_box = QFrame()
             dsc_box.setFrameShape(QFrame.StyledPanel)
+            dsc_box.setStyleSheet("QFrame { border: 1px solid palette(mid); padding: 2px; }")
             dsc_layout = QVBoxLayout(dsc_box)
-            dsc_layout.setSpacing(2)
+            dsc_layout.setContentsMargins(4, 4, 4, 4)
+            dsc_layout.setSpacing(1)
             self.cb_discord = QCheckBox("Discord Integration")
             self.cb_discord.setChecked(self.config.get("enable_discord", False))
             self.cb_discord.stateChanged.connect(self.save)
@@ -1414,6 +1420,7 @@ def run_gui_mode():
             self.entry_webhook.setPlaceholderText("URL")
             self.entry_webhook.setText(self.config.get("discord_webhook", ""))
             self.entry_webhook.editingFinished.connect(self.save)
+            self.entry_webhook.setMinimumWidth(140)
             dsc_row1.addWidget(self.entry_webhook)
             dsc_layout.addLayout(dsc_row1)
             dsc_row2 = QHBoxLayout()
@@ -1421,6 +1428,7 @@ def run_gui_mode():
             self.entry_token = QLineEdit()
             self.entry_token.setEchoMode(QLineEdit.Password)
             self.entry_token.setText(self.config.get("discord_token", ""))
+            self.entry_token.setMinimumWidth(140)
             self.entry_token.editingFinished.connect(self.save)
             dsc_row2.addWidget(self.entry_token)
             dsc_layout.addLayout(dsc_row2)
@@ -1429,6 +1437,7 @@ def run_gui_mode():
             self.entry_channel = QLineEdit()
             self.entry_channel.setPlaceholderText("ID")
             self.entry_channel.setText(str(self.config.get("discord_channel_id", 0)))
+            self.entry_channel.setMinimumWidth(80)
             self.entry_channel.editingFinished.connect(self.save)
             dsc_row3.addWidget(self.entry_channel)
             dsc_layout.addLayout(dsc_row3)
@@ -1444,40 +1453,50 @@ def run_gui_mode():
                 except Exception as e:
                     QMessageBox.critical(self, "Error", f"Could not open directory: {e}")
 
-            right_col = QVBoxLayout()
-            right_col.setSpacing(4)
-            qa_row = QHBoxLayout()
+            nav_col = QVBoxLayout()
+            nav_col.setSpacing(1)
             for lbl, path in [("Server", "."), ("Worlds", WORLD_DIR), ("Backups", BACKUP_DIR)]:
                 b = QPushButton(lbl)
-                b.setFixedWidth(72)
+                b.setFixedWidth(70)
+                b.setFixedHeight(22)
                 b.clicked.connect(lambda checked, p=path: open_dir(p))
-                qa_row.addWidget(b)
-            right_col.addLayout(qa_row)
+                nav_col.addWidget(b)
+            nav_col.addSpacing(4)
+            self.lbl_status = QLabel("Status: Stopped")
+            self.lbl_status.setStyleSheet("font-weight: bold;")
+            nav_col.addWidget(self.lbl_status)
+            controls_layout.addLayout(nav_col)
+
+            action_col = QVBoxLayout()
+            action_col.setSpacing(2)
             self.btn_start = QPushButton("START SERVER")
-            self.btn_start.setFixedHeight(28)
+            self.btn_start.setFixedHeight(26)
+            self.btn_start.setFixedWidth(140)
             self.btn_start.setStyleSheet("font-weight: bold; color: #107C10;")
             self.btn_start.clicked.connect(self.start_server)
-            right_col.addWidget(self.btn_start)
+            action_col.addWidget(self.btn_start)
             self.btn_stop = QPushButton("STOP SERVER")
-            self.btn_stop.setFixedHeight(28)
+            self.btn_stop.setFixedHeight(26)
+            self.btn_stop.setFixedWidth(140)
             self.btn_stop.setStyleSheet("font-weight: bold; color: #D13438;")
             self.btn_stop.setEnabled(False)
             self.btn_stop.clicked.connect(self.stop_server)
-            right_col.addWidget(self.btn_stop)
-            right_col.addWidget(QLabel(f"Version: {self.config.get('last_server_version', 'Unknown')}"))
+            action_col.addWidget(self.btn_stop)
+            ver_lbl = QLabel(f"Version: {self.config.get('last_server_version', 'Unknown')}")
+            ver_lbl.setStyleSheet("font-size: 10px; color: grey;")
+            action_col.addWidget(ver_lbl)
             stats_row = QHBoxLayout()
             self.lbl_cpu = QLabel("CPU: 0%")
             self.lbl_ram = QLabel("RAM: 0%")
+            self.lbl_cpu.setStyleSheet("font-size: 10px; color: grey;")
+            self.lbl_ram.setStyleSheet("font-size: 10px; color: grey;")
             stats_row.addWidget(self.lbl_cpu)
             stats_row.addWidget(self.lbl_ram)
-            right_col.addLayout(stats_row)
-            self.lbl_status = QLabel("Status: Stopped")
-            self.lbl_status.setStyleSheet("font-weight: bold;")
-            right_col.addWidget(self.lbl_status)
+            action_col.addLayout(stats_row)
             self.lbl_uptime = QLabel("Uptime: 00:00:00")
-            right_col.addWidget(self.lbl_uptime)
-            right_col.addStretch()
-            controls_layout.addLayout(right_col)
+            self.lbl_uptime.setStyleSheet("font-size: 10px;")
+            action_col.addWidget(self.lbl_uptime)
+            controls_layout.addLayout(action_col)
 
             main.addWidget(controls)
 
@@ -1485,17 +1504,21 @@ def run_gui_mode():
             self.console.setReadOnly(True)
             self.console.setFont(QFont("Consolas", 9))
             self.console.setMaximumBlockCount(1000)
-            main.addWidget(self.console)
+            self.console.setMinimumHeight(300)
+            main.addWidget(self.console, 1)
 
-            cmd_row = QHBoxLayout()
-            cmd_row.addWidget(QLabel("Command:"))
+            cmd_frame = QFrame()
+            cmd_layout = QHBoxLayout(cmd_frame)
+            cmd_layout.setContentsMargins(0, 2, 0, 2)
+            cmd_layout.addWidget(QLabel("Command:"))
             self.entry_cmd = QLineEdit()
             self.entry_cmd.setPlaceholderText("Enter server command...")
             self.entry_cmd.returnPressed.connect(self.send_command_ui)
-            cmd_row.addWidget(self.entry_cmd)
-            main.addLayout(cmd_row)
+            cmd_layout.addWidget(self.entry_cmd)
+            main.addWidget(cmd_frame)
 
             footer = QHBoxLayout()
+            footer.setSpacing(8)
             theme_btn = QPushButton("Toggle Theme")
             theme_btn.clicked.connect(self.toggle_theme)
             footer.addWidget(theme_btn)
@@ -1679,7 +1702,7 @@ def run_gui_mode():
 
         def apply_theme(self):
             if self.is_dark:
-                bg, fg, txt_bg = "#1a1a1a", "#e0e0e0", "#0c0c0c"
+                bg, fg, txt_bg = "#121212", "#e0e0e0", "#0c0c0c"
             else:
                 bg, fg, txt_bg = "#f5f5f5", "#1a1a1a", "#ffffff"
             p = self.palette()
