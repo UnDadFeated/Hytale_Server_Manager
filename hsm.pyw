@@ -53,7 +53,7 @@ if platform.system() == "Windows":
     # Also optionally use STARTUPINFO to hide things deeper if needed.
 else:
     CREATE_NO_WINDOW = 0
-__version__ = "3.9.4"
+__version__ = "3.9.5"
 
 
 
@@ -1631,13 +1631,13 @@ def run_gui_mode():
             self.btn_start = QPushButton("START SERVER")
             self.btn_start.setFixedHeight(26)
             self.btn_start.setFixedWidth(140)
-            self.btn_start.setStyleSheet("font-weight: bold; color: #107C10;")
+            self.btn_start.setObjectName("btnStart")
             self.btn_start.clicked.connect(self.start_server)
             action_col.addWidget(self.btn_start)
             self.btn_stop = QPushButton("STOP SERVER")
             self.btn_stop.setFixedHeight(26)
             self.btn_stop.setFixedWidth(140)
-            self.btn_stop.setStyleSheet("font-weight: bold; color: #D13438;")
+            self.btn_stop.setObjectName("btnStop")
             self.btn_stop.setEnabled(False)
             self.btn_stop.clicked.connect(self.stop_server)
             action_col.addWidget(self.btn_stop)
@@ -1661,7 +1661,7 @@ def run_gui_mode():
 
             self.console = QPlainTextEdit()
             self.console.setReadOnly(True)
-            self.console.setFont(QFont("Consolas", 9))
+            self.console.setFont(QFont("Consolas", 8))
             self.console.setMaximumBlockCount(1000)
             self.console.setMinimumHeight(300)
             main.addWidget(self.console, 1)
@@ -1866,8 +1866,14 @@ def run_gui_mode():
         def apply_theme(self):
             if self.is_dark:
                 bg, fg, txt_bg = "#121212", "#e0e0e0", "#0c0c0c"
+                cb_hover = "#4a7ac9"
+                btn_hover_bg = "#3a3a3a"
+                btn_border = "#5a5a5a"
             else:
                 bg, fg, txt_bg = "#f5f5f5", "#1a1a1a", "#ffffff"
+                cb_hover = "#2a6ac9"
+                btn_hover_bg = "#e8e8e8"
+                btn_border = "#aaa"
             p = self.palette()
             p.setColor(QPalette.Window, QColor(bg))
             p.setColor(QPalette.WindowText, QColor(fg))
@@ -1876,10 +1882,23 @@ def run_gui_mode():
             p.setColor(QPalette.Button, QColor("#2d2d2d" if self.is_dark else "#e0e0e0"))
             p.setColor(QPalette.ButtonText, QColor(fg))
             self.setPalette(p)
-            self.console.setStyleSheet(f"background-color: {txt_bg}; color: #d4d4d4; font-family: Consolas;")
-            if not self.is_dark:
-                self.btn_start.setStyleSheet("font-weight: bold; color: #107C10;")
-                self.btn_stop.setStyleSheet("font-weight: bold; color: #D13438;")
+            qss = f"""
+                QCheckBox {{ color: {fg}; padding: 2px; }}
+                QCheckBox:hover {{ color: {cb_hover}; }}
+                QCheckBox:checked {{ font-weight: bold; }}
+                QPushButton {{ border: 1px solid {btn_border}; border-radius: 4px; padding: 4px 8px; }}
+                QPushButton:hover {{ border: 2px solid {cb_hover}; background: {btn_hover_bg}; }}
+                QPushButton:pressed {{ border: 2px solid {cb_hover}; background: {cb_hover}; color: white; }}
+                QPushButton:disabled {{ opacity: 0.5; }}
+                #btnStart {{ font-weight: bold; color: #107C10; }}
+                #btnStart:hover {{ border: 2px solid #2ed12e; background: #1a4d1a; }}
+                #btnStart:pressed {{ border: 2px solid #2ed12e; background: #107C10; color: white; }}
+                #btnStop {{ font-weight: bold; color: #D13438; }}
+                #btnStop:hover {{ border: 2px solid #ff6b6b; background: #4d1a1a; }}
+                #btnStop:pressed {{ border: 2px solid #ff6b6b; background: #D13438; color: white; }}
+            """
+            self.setStyleSheet(qss)
+            self.console.setStyleSheet(f"QPlainTextEdit {{ background: {txt_bg}; color: #d4d4d4; font-family: Consolas; font-size: 11px; }}")
 
         def toggle_theme(self):
             self.is_dark = not self.is_dark

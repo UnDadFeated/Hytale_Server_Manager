@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.9.5 (2025-03-21)
+
+- **feat:** Interactive buttons/checkboxes: hover color change, active button glow (PySide6 QSS)
+- **fix:** Console text 1pt smaller (8pt) for better fit
+
 ## 3.9.4 (2025-03-21)
 
 - **feat:** Pre-req check before GUI; visible warning + auto-install when PySide6/psutil missing

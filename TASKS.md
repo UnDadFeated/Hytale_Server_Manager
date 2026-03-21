@@ -6,6 +6,12 @@
 
 ## Completed by Version
 
+### 3.9.5 (2025-03-21)
+
+- [x] Interactive buttons: hover color, active glow (PySide6 QSS)
+- [x] Checkbox hover color change
+- [x] Console text 1pt smaller (8pt)
+
 ### 3.9.4 (2025-03-21)
 
 - [x] Pre-req check (PySide6, psutil) before GUI launch
