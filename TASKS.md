@@ -6,6 +6,12 @@
 
 ## Completed by Version
 
+### 3.9.4 (2025-03-21)
+
+- [x] Pre-req check (PySide6, psutil) before GUI launch
+- [x] Visible warning + Install option for pythonw (tkinter/MessageBox/osascript/zenity/help file)
+- [x] psutil optional; CPU/RAM show N/A when missing
+
 ### 3.9.3 (2025-03-21)
 
 - [x] Remove rich (no console with pythonw); add IS_PYTHONW

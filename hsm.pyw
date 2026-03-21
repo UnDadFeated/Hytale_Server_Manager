@@ -40,10 +40,12 @@ import contextlib
 _debug("IMPORT", "core stdlib imports done")
 try:
     import psutil
+    HAS_PSUTIL = True
     _debug("IMPORT", "psutil OK")
 except ImportError as e:
+    HAS_PSUTIL = False
+    psutil = None
     _debug("IMPORT", f"psutil FAIL: {e}")
-    raise
 
 # Windows flag for hiding child console windows.
 if platform.system() == "Windows":
@@ -51,7 +53,7 @@ if platform.system() == "Windows":
     # Also optionally use STARTUPINFO to hide things deeper if needed.
 else:
     CREATE_NO_WINDOW = 0
-__version__ = "3.9.3"
+__version__ = "3.9.4"
 
 
 
@@ -87,6 +89,130 @@ try:
 except ImportError:
     HAS_DISCORD = False
     _debug("IMPORT", "discord skip (optional)")
+
+
+def _check_gui_requirements():
+    """Returns list of missing packages required for GUI."""
+    missing = []
+    try:
+        import PySide6  # noqa: F401
+    except ImportError:
+        missing.append("PySide6")
+    if not HAS_PSUTIL:
+        missing.append("psutil")
+    return missing
+
+
+def _show_missing_deps_and_offer_install(missing):
+    """
+    Show a visible warning that deps are missing and offer to install.
+    Works with pythonw (no console). Returns True if user chose Install and it succeeded (or deps now OK).
+    """
+    pkg_list = ", ".join(missing)
+    msg = (
+        f"Hytale Server Manager cannot start the GUI.\n\n"
+        f"Missing: {pkg_list}\n\n"
+        f"Would you like to install them now?"
+    )
+    def do_install():
+        exe = sys.executable
+        if IS_WINDOWS and "pythonw" in exe.lower():
+            exe = exe.replace("pythonw.exe", "python.exe").replace("pythonw", "python.exe")
+        cmd = [exe, "-m", "pip", "install"] + missing
+        _debug("DEPS", f"Running: {cmd}")
+        try:
+            r = subprocess.run(cmd)
+            _debug("DEPS", f"pip exit code: {r.returncode}")
+            return r.returncode == 0
+        except Exception as e:
+            _debug("DEPS", f"pip failed: {e}")
+            return False
+
+    try:
+        import tkinter as tk
+        from tkinter import messagebox
+        root = tk.Tk()
+        root.withdraw()
+        root.attributes("-topmost", True)
+        if messagebox.askyesno("Hytale Server Manager - Missing Requirements", msg):
+            root.destroy()
+            ok = do_install()
+            root = tk.Tk()
+            root.withdraw()
+            messagebox.showinfo("Hytale Server Manager", "Restart the application." if ok else f"Install failed. Run: pip install {pkg_list}")
+            root.destroy()
+            return ok
+        root.destroy()
+        return False
+    except Exception as e:
+        _debug("DEPS", f"tkinter failed: {e}")
+
+    if IS_WINDOWS:
+        try:
+            import ctypes
+            MB_YESNO = 0x4
+            IDYES = 6
+            r = ctypes.windll.user32.MessageBoxW(0, msg, "Hytale Server Manager - Missing Requirements", MB_YESNO)
+            if r != IDYES:
+                _debug("DEPS", "User chose No")
+                return False
+            ok = do_install()
+            ctypes.windll.user32.MessageBoxW(
+                0,
+                "Installation complete. Restart the application." if ok else "Installation failed. Try: pip install " + pkg_list,
+                "Hytale Server Manager",
+                0x40,
+            )
+            return ok
+        except Exception as e:
+            _debug("DEPS", f"MessageBox fallback failed: {e}")
+
+    if IS_DARWIN:
+        try:
+            msg_esc = msg.replace('"', "'").replace("\n", " ")[:200]
+            script = f'display dialog "{msg_esc}" with title "Hytale Server Manager" buttons {{"Install", "Cancel"}} default button "Install"'
+            r = subprocess.run(["osascript", "-e", script], capture_output=True, text=True)
+            if "Install" not in (r.stdout or ""):
+                return False
+            ok = do_install()
+            result_msg = ("Restart the application." if ok else f"Install failed. Run: pip install {pkg_list}").replace('"', "'")
+            subprocess.run(["osascript", "-e", f'display dialog "{result_msg}" with title "Hytale Server Manager" buttons {{"OK"}}'], capture_output=True)
+            return ok
+        except Exception as e:
+            _debug("DEPS", f"osascript failed: {e}")
+
+    if IS_LINUX:
+        try:
+            for cmd in ["zenity", "kdialog"]:
+                try:
+                    r = subprocess.run([cmd, "--question", "--text=" + msg[:500], "--title=Hytale Server Manager"], capture_output=True)
+                    if r.returncode == 0:
+                        ok = do_install()
+                        subprocess.run([cmd, "--msgbox", "Restart the application." if ok else f"Install failed. Run: pip install {pkg_list}"], capture_output=True)
+                        return ok
+                    return False
+                except FileNotFoundError:
+                    continue
+        except Exception as e:
+            _debug("DEPS", f"Linux dialog failed: {e}")
+
+    help_path = os.path.join(BASE_DIR, "INSTALL_REQUIREMENTS.txt")
+    try:
+        with open(help_path, "w", encoding="utf-8") as f:
+            f.write(f"Hytale Server Manager - Missing: {pkg_list}\n\n")
+            f.write("Run this command in Command Prompt (Windows) or Terminal (Mac/Linux):\n\n")
+            f.write(f"    pip install {pkg_list}\n\n")
+            f.write("Or:  pip install -r requirements.txt\n")
+        if IS_WINDOWS:
+            os.startfile(help_path)
+        elif IS_DARWIN:
+            subprocess.run(["open", help_path])
+        else:
+            subprocess.run(["xdg-open", help_path], capture_output=True)
+    except Exception as e:
+        _debug("DEPS", f"Could not write help file: {e}")
+    return False
+
 
 def validate_config(config):
     """
@@ -1664,6 +1790,7 @@ def run_gui_mode():
         def update_stats(self, status):
             def apply():
                 state = status.get("state", "Unknown")
+            if HAS_PSUTIL:
                 try:
                     cpu_load = psutil.cpu_percent(interval=None)
                     ram_load = psutil.virtual_memory().percent
@@ -1671,6 +1798,9 @@ def run_gui_mode():
                     self.lbl_ram.setText(f"RAM: {ram_load}%")
                 except Exception:
                     pass
+            else:
+                self.lbl_cpu.setText("CPU: N/A")
+                self.lbl_ram.setText("RAM: N/A")
                 if state == "Stopped":
                     self.btn_start.setEnabled(True)
                     self.btn_stop.setEnabled(False)
@@ -1865,11 +1995,20 @@ def main():
         run_console_mode()
     else:
         _debug("MAIN", "starting GUI mode")
+        missing = _check_gui_requirements()
+        while missing:
+            _debug("MAIN", f"Missing GUI deps: {missing}")
+            if not _show_missing_deps_and_offer_install(missing):
+                _debug("MAIN", "User cancelled or install failed")
+                sys.exit(1)
+            missing = _check_gui_requirements()
         try:
             run_gui_mode()
             _debug("MAIN", "run_gui_mode returned (app exited normally)")
         except ImportError as e:
             _debug("GUI", f"ImportError: {e}")
+            if "PySide6" in str(e) or "PySide" in str(e):
+                _debug("GUI", "Fix: pip install PySide6  (or: pip install -r requirements.txt)")
             if not IS_PYTHONW:
                 traceback.print_exc()
                 print("GUI libraries not found (PySide6 required).")

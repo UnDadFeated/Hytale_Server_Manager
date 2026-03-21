@@ -1,4 +1,5 @@
 *.log
+INSTALL_REQUIREMENTS.txt
 __pycache__/
 *.py[cod]
 hytale-downloader/

@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.9.4 (2025-03-21)
+
+- **feat:** Pre-req check before GUI; visible warning + auto-install when PySide6/psutil missing
+- **feat:** Works with pythonw (no console): tkinter → Windows MessageBox → macOS osascript → Linux zenity/kdialog → fallback help file
+- **refactor:** psutil optional; show N/A for CPU/RAM when missing
+
 ## 3.9.3 (2025-03-21)
 
 - **refactor:** Remove rich; add IS_PYTHONW; skip input() in exception handlers when pythonw to prevent hang

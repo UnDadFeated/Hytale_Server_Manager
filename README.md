@@ -6,7 +6,7 @@
   </p>
 
   <p>
-    <img alt="Version" src="https://img.shields.io/badge/version-3.9.3-blue.svg" />
+    <img alt="Version" src="https://img.shields.io/badge/version-3.9.4-blue.svg" />
     <img alt="Python" src="https://img.shields.io/badge/python-3.8%2B-blue.svg" />
     <img alt="Platform" src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20Arch%20%7C%20macOS-lightgrey.svg" />
   </p>
@@ -29,6 +29,7 @@
 * 💬 **Discord Integration:** Features integrated Discord Webhooks to instantly alert your community on server status changes (Startup, Shutdown, Crashes). Includes a basic threaded bot for chat commands.
 * 📡 **Background Polling:** In GUI mode, periodically scans for new official Hytale server versions every 30 minutes, downloading and replacing engine files as necessary.
 * 🐧 **Linux Native Support:** Includes utilities for installing the manager as a native systemd service, and for enabling cross-distribution desktop auto-start.
+* 📦 **Smart Pre-req Check:** If PySide6 or psutil is missing, a visible dialog offers to install them—even when launched with pythonw (no console).
 
 ---
 
@@ -139,10 +140,11 @@ Changes made to the server logic are primarily driven by the `hsm.conf` JSON fla
 
 ## 🏷️ Versioning
 
-**Current Version:** `3.9.3`
+**Current Version:** `3.9.4`
 
 ### Changelog
 
+- **3.9.4** — Pre-req check with visible warning + one-click Install when PySide6/psutil missing (works with pythonw).
 - **3.9.3** — Remove rich; pythonw-friendly exception handling (no input hang).
 - **3.9.2** — debug.log on startup for launch diagnostics.
 - **3.9.1** — Restore compact layout: 1080×800, dense controls, large console.
