@@ -6,6 +6,10 @@
 
 ## Completed by Version
 
+### 3.10.18 (2025-03-21)
+
+- [x] Status label: color only Running/Stopped, not "Status:"
+
 ### 3.10.17 (2025-03-21)
 
 - [x] Status label: poll core state; fix "Stopped" when server running

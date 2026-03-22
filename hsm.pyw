@@ -60,7 +60,7 @@ if platform.system() == "Windows":
     # Also optionally use STARTUPINFO to hide things deeper if needed.
 else:
     CREATE_NO_WINDOW = 0
-__version__ = "3.10.17"
+__version__ = "3.10.18"
 JAVA_VERSION_REQ = 25
 SERVER_JAR = "HytaleServer.jar"
 UPDATER_ZIP_URL = "https://downloader.hytale.com/hytale-downloader.zip"
@@ -1705,9 +1705,10 @@ def run_gui_mode():
                 b.clicked.connect(lambda checked, p=path: open_dir(p))
                 nav_col.addWidget(b)
             nav_col.addSpacing(4)
-            self.lbl_status = QLabel("Status: Stopped")
+            self.lbl_status = QLabel("Status: <span style='color:#e53935'>Stopped</span>")
             self.lbl_status.setObjectName("statusLbl")
-            self.lbl_status.setStyleSheet("font-weight: bold; color: #e53935;")
+            self.lbl_status.setTextFormat(Qt.RichText)
+            self.lbl_status.setStyleSheet("font-weight: bold;")
             nav_col.addWidget(self.lbl_status)
             controls_layout.addLayout(nav_col)
 
@@ -1906,15 +1907,13 @@ def run_gui_mode():
                 self.core.server_process is not None
                 and self.core.server_process.poll() is None
             )
-            # Update status label with correct text and color
+            # Update status label (color only on Running/Stopped, not "Status:")
             if running:
-                self.lbl_status.setText("Status: Running")
-                self.lbl_status.setStyleSheet("font-weight: bold; color: #43a047;")
+                self.lbl_status.setText("Status: <span style='color:#43a047'>Running</span>")
                 self.btn_start.setEnabled(False)
                 self.btn_stop.setEnabled(True)
             else:
-                self.lbl_status.setText("Status: Stopped")
-                self.lbl_status.setStyleSheet("font-weight: bold; color: #e53935;")
+                self.lbl_status.setText("Status: <span style='color:#e53935'>Stopped</span>")
                 self.btn_start.setEnabled(True)
                 self.btn_stop.setEnabled(False)
             # Update uptime
@@ -1940,14 +1939,12 @@ def run_gui_mode():
                 if state == "Stopped":
                     self.btn_start.setEnabled(True)
                     self.btn_stop.setEnabled(False)
-                    self.lbl_status.setText("Status: Stopped")
-                    self.lbl_status.setStyleSheet("font-weight: bold; color: #e53935;")
+                    self.lbl_status.setText("Status: <span style='color:#e53935'>Stopped</span>")
                     self.lbl_uptime.setText("Uptime: 00:00:00")
                 elif state == "Running":
                     self.btn_start.setEnabled(False)
                     self.btn_stop.setEnabled(True)
-                    self.lbl_status.setText("Status: Running")
-                    self.lbl_status.setStyleSheet("font-weight: bold; color: #43a047;")
+                    self.lbl_status.setText("Status: <span style='color:#43a047'>Running</span>")
                     self.lbl_uptime.setText(f"Uptime: {status.get('uptime', '00:00:00')}")
             QTimer.singleShot(0, apply)
 

@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.10.18 (2025-03-21)
+
+- **fix:** Status label: color only "Running"/"Stopped", keep "Status:" in default theme color
+
 ## 3.10.17 (2025-03-21)
 
 - **fix:** Status label: poll core state in _refresh_uptime (fixes "Stopped" when server running)
