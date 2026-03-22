@@ -25,6 +25,7 @@ _debug("START", f"executable={sys.executable} | pythonw={('pythonw' in sys.execu
 import subprocess
 import time
 import shutil
+import atexit
 import urllib.request
 import zipfile
 import threading
@@ -53,7 +54,7 @@ if platform.system() == "Windows":
     # Also optionally use STARTUPINFO to hide things deeper if needed.
 else:
     CREATE_NO_WINDOW = 0
-__version__ = "3.9.6"
+__version__ = "3.9.7"
 
 
 
@@ -78,6 +79,7 @@ WORLD_DIR = "universe/worlds"
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 LOG_FILE = os.path.join(BASE_DIR, "hsm.log")
 CONFIG_FILE = os.path.join(BASE_DIR, "hsm.conf")
+LOCK_FILE = os.path.join(BASE_DIR, ".hsm.lock")
 
 console = None  # No rich; pythonw has no console
 
@@ -90,6 +92,32 @@ except ImportError:
     HAS_DISCORD = False
     _debug("IMPORT", "discord skip (optional)")
 
+
+def _acquire_single_instance_lock():
+    """Returns (True, None) if we got the lock, else (False, error_msg)."""
+    try:
+        if os.path.exists(LOCK_FILE):
+            with open(LOCK_FILE, "r") as f:
+                old_pid = int(f.read().strip())
+            if HAS_PSUTIL and psutil.pid_exists(old_pid):
+                return False, f"Another instance is already running (PID {old_pid}). Close it first."
+            try:
+                os.remove(LOCK_FILE)
+            except OSError:
+                pass
+        with open(LOCK_FILE, "w") as f:
+            f.write(str(os.getpid()))
+        def _release():
+            try:
+                if os.path.exists(LOCK_FILE):
+                    os.remove(LOCK_FILE)
+            except OSError:
+                pass
+        atexit.register(_release)
+        return True, None
+    except Exception as e:
+        _debug("LOCK", f"acquire failed: {e}")
+        return True, None
 
 def _check_gui_requirements():
     """Returns list of missing packages required for GUI."""
@@ -1904,10 +1932,8 @@ def run_gui_mode():
             input_bg = "#c8c8c8"
             qss = f"""
                 QCheckBox {{ color: {fg}; padding: 2px; }}
-                QCheckBox::indicator {{ width: 16px; height: 16px; background: {input_bg}; border: 1px solid {btn_border}; border-radius: 2px; }}
-                QCheckBox::indicator:hover {{ border: 2px solid {cb_hover}; }}
-                QCheckBox::indicator:checked {{ background: #707070; border: 1px solid {btn_border}; color: white; }}
-                QCheckBox::indicator:checked:hover {{ border: 2px solid {cb_hover}; }}
+                QCheckBox:hover {{ color: {cb_hover}; }}
+                QCheckBox::indicator:hover {{ border: 1px solid {cb_hover}; }}
                 QLineEdit {{ background: {input_bg}; color: #1a1a1a; padding: 2px; border: 1px solid {btn_border}; }}
                 QPushButton {{ border: 1px solid {btn_border}; border-radius: 4px; padding: 4px 8px; }}
                 QPushButton:hover {{ border: 2px solid {cb_hover}; background: {btn_hover_bg}; }}
@@ -2031,6 +2057,19 @@ def main():
         _debug("MAIN", "enable-autostart")
         enable_autostart()
         sys.exit(0)
+
+    ok, err = _acquire_single_instance_lock()
+    if not ok:
+        _debug("MAIN", f"single-instance block: {err}")
+        if IS_PYTHONW and IS_WINDOWS:
+            try:
+                import ctypes
+                ctypes.windll.user32.MessageBoxW(0, err, "Hytale Server Manager", 0x10)
+            except Exception:
+                pass
+        else:
+            print(err)
+        sys.exit(1)
 
     if "-nogui" in sys.argv:
         _debug("MAIN", "starting console mode")

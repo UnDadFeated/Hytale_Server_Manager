@@ -6,6 +6,11 @@
 
 ## Completed by Version
 
+### 3.9.7 (2025-03-21)
+
+- [x] Single-instance detection (lock file, PID check)
+- [x] Default checkboxes with slight hover effect
+
 ### 3.9.6 (2025-03-21)
 
 - [x] Extended debug.log: server start/stop/crash, backup, send_command, schedule restart

@@ -1,5 +1,6 @@
 *.log
 INSTALL_REQUIREMENTS.txt
+.hsm.lock
 __pycache__/
 *.py[cod]
 hytale-downloader/

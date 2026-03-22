@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.9.7 (2025-03-21)
+
+- **feat:** Single-instance detection; prevents multiple hsm.pyw from fighting over server
+- **fix:** Default checkboxes (visible checkmark); slight hover effect on checkboxes
+
 ## 3.9.6 (2025-03-21)
 
 - **feat:** Extended debug.log: server lifecycle (start/stop/crash/restart), backup, commands, schedule
