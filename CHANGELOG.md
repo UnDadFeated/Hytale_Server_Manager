@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.10.13 (2025-03-22)
+
+- **fix:** Dark mode: input boxes 1 shade lighter (#222222) for better contrast with GUI bg
+
 ## 3.10.12 (2025-03-22)
 
 - **fix:** Footer 1px taller (35px); buttons/checkboxes margin-top 1px (fix top-line clipping)

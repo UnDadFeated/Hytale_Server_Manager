@@ -54,7 +54,7 @@ if platform.system() == "Windows":
     # Also optionally use STARTUPINFO to hide things deeper if needed.
 else:
     CREATE_NO_WINDOW = 0
-__version__ = "3.10.12"
+__version__ = "3.10.13"
 
 
 
@@ -1964,7 +1964,7 @@ def run_gui_mode():
             if self.is_dark:
                 # Cursor-IDE palette: charcoal layers; buttons/footer grey (not black); consistent labels
                 bg, fg = "#0b0b0b", "#e0e0e0"
-                input_bg, input_fg = "#1e1e1e", "#e0e0e0"
+                input_bg, input_fg = "#222222", "#e0e0e0"
                 console_bg, console_fg = "#0c0c0c", "#d4d4d4"
                 muted, cb_hover = "#9d9d9d", "#3fb950"
                 btn_bg, btn_hover_bg, btn_border = "#181818", "#202020", "#333333"

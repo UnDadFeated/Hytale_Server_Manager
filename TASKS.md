@@ -6,6 +6,10 @@
 
 ## Completed by Version
 
+### 3.10.13 (2025-03-22)
+
+- [x] Dark mode: input boxes 1 shade lighter (#222222)
+
 ### 3.10.12 (2025-03-22)
 
 - [x] Footer 1px taller; buttons moved down 1px (fix top clipping)
