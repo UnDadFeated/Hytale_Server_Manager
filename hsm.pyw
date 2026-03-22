@@ -60,7 +60,7 @@ if platform.system() == "Windows":
     # Also optionally use STARTUPINFO to hide things deeper if needed.
 else:
     CREATE_NO_WINDOW = 0
-__version__ = "3.10.21"
+__version__ = "3.10.22"
 JAVA_VERSION_REQ = 25
 SERVER_JAR = "HytaleServer.jar"
 UPDATER_ZIP_URL = "https://downloader.hytale.com/hytale-downloader.zip"
@@ -1740,6 +1740,7 @@ def run_gui_mode():
             stats_row.addWidget(self.lbl_cpu)
             stats_row.addWidget(self.lbl_ram)
             stats_container = QWidget()
+            stats_container.setObjectName("statsContainer")
             stats_container.setLayout(stats_row)
             action_col.addWidget(stats_container, 0, Qt.AlignHCenter)
             self.lbl_uptime = QLabel("Uptime: 00:00:00")
@@ -2077,6 +2078,7 @@ def run_gui_mode():
                 QGroupBox::title {{ subcontrol-origin: margin; left: 8px; padding: 0 4px; color: {fg}; }}
                 QFrame {{ color: {fg}; {frame_border} padding: 4px; }}
                 QLabel {{ color: {fg}; border: none; background: transparent; }}
+                #statsContainer {{ background: {footer_bg}; border: none; }}
                 #mutedLbl {{ font-size: 10px; color: {muted}; margin: 0; padding: 0; background: transparent; }}
                 #statusLbl {{ border: none; background: transparent; padding: 2px 0; min-height: 1.2em; }}
                 QPushButton {{ {btn_border_style} padding: 4px 8px; color: {fg}; background: {btn_bg}; }}

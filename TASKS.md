@@ -6,9 +6,13 @@
 
 ## Completed by Version
 
+### 3.10.22 (2025-03-21)
+
+- [x] CPU/RAM: statsContainer explicit footer_bg (fix black bg)
+
 ### 3.10.21 (2025-03-21)
 
-- [x] Control config box: footer grey bg; buttons = discord input grey; CPU/RAM transparent
+- [x] Control config box: footer grey bg; buttons = discord input grey
 
 ### 3.10.20 (2025-03-21)
 

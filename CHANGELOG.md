@@ -1,9 +1,12 @@
 # Changelog
 
+## 3.10.22 (2025-03-21)
+
+- **fix:** CPU/RAM: #statsContainer explicit footer_bg (overrides QWidget black)
+
 ## 3.10.21 (2025-03-21)
 
 - **fix:** Control config box: footer grey (#181818) bg; buttons = discord input grey (#222222)
-- **fix:** CPU/RAM metric: remove black bg (transparent)
 
 ## 3.10.20 (2025-03-21)
 
