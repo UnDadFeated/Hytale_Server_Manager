@@ -54,7 +54,7 @@ if platform.system() == "Windows":
     # Also optionally use STARTUPINFO to hide things deeper if needed.
 else:
     CREATE_NO_WINDOW = 0
-__version__ = "3.9.9"
+__version__ = "3.10.0"
 
 
 
@@ -77,6 +77,8 @@ WORLD_DIR = "universe/worlds"
 # This ensures the manager works correctly when launched by Windows at startup
 # (which sets CWD to System32 by default).
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+CHECK_WHITE = os.path.join(BASE_DIR, "check_white.svg").replace("\\", "/")
+CHECK_BLACK = os.path.join(BASE_DIR, "check_black.svg").replace("\\", "/")
 LOG_FILE = os.path.join(BASE_DIR, "hsm.log")
 CONFIG_FILE = os.path.join(BASE_DIR, "hsm.conf")
 LOCK_FILE = os.path.join(BASE_DIR, ".hsm.lock")
@@ -1740,10 +1742,12 @@ def run_gui_mode():
                 self.cb_start_win.setEnabled(False)
             footer.addWidget(self.cb_start_win)
             footer.addStretch()
-            footer.addWidget(QLabel("☕ Buy me a coffee:"))
-            btn_pp = QPushButton("PayPal ($5)")
-            btn_pp.clicked.connect(self.open_donation_link)
-            footer.addWidget(btn_pp)
+            btn_check = QPushButton("Check for updates")
+            btn_check.clicked.connect(self.check_updates_ui)
+            footer.addWidget(btn_check)
+            btn_coffee = QPushButton("☕ Buy me a coffee")
+            btn_coffee.clicked.connect(self.open_donation_link)
+            footer.addWidget(btn_coffee)
             main.addLayout(footer)
 
         def browse_aot(self):
@@ -1752,16 +1756,23 @@ def run_gui_mode():
                 self.entry_aot.setText(path)
                 self.save()
 
+        def check_updates_ui(self):
+            self.core.log("Checking for manager and server updates...")
+            if self.core.check_self_update():
+                self.core.log("Manager update found. Restarting...")
+            else:
+                self.core.log("Up to date.")
+
         def open_donation_link(self):
-            pp_url = "https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=jscheema@gmail.com&item_name=Hytale%20Server%20Updater&amount=5.00&currency_code=USD&lc=US"
+            donate_url = "https://buymeacoffee.com/jscheema"
             try:
                 with open(os.devnull, "w") as null_err:
                     with contextlib.redirect_stderr(null_err):
-                        success = webbrowser.open(pp_url)
+                        success = webbrowser.open(donate_url)
                 if not success:
-                    self.core.log(f"[Donate] Could not open browser. Please visit: {pp_url}")
+                    self.core.log(f"[Donate] Could not open browser. Please visit: {donate_url}")
             except Exception as e:
-                self.core.log(f"[Donate] Failed to open browser ({e}). Please visit: {pp_url}")
+                self.core.log(f"[Donate] Failed to open browser ({e}). Please visit: {donate_url}")
 
         def send_command_ui(self):
             cmd = self.entry_cmd.text().strip()
@@ -1913,6 +1924,7 @@ def run_gui_mode():
 
         def apply_theme(self):
             silver = "#6b6b6b"
+            def file_url(p): return "file:///" + os.path.abspath(p).replace("\\", "/")
             if self.is_dark:
                 # Cursor-IDE / VS Code Dark+ theme; console black; 1px silver borders
                 bg, fg = "#1e1e1e", "#d4d4d4"
@@ -1920,34 +1932,44 @@ def run_gui_mode():
                 console_bg, console_fg = "#0c0c0c", "#d4d4d4"
                 muted, cb_hover = "#bbbbbb", "#569cd6"
                 btn_hover_bg, btn_border = "#2d2d30", silver
+                cb_checked = f"background: {cb_hover}; border-color: {cb_hover}; image: url({file_url(CHECK_WHITE)});"
+                input_border = f"border: 1px solid {btn_border};"
+                group_border = f"border: 1px solid {btn_border}; border-radius: 4px;"
+                frame_border = f"border: 1px solid {btn_border}; border-radius: 4px;"
+                btn_border_style = f"border: 1px solid {btn_border}; border-radius: 4px;"
             else:
-                # Light: default Windows colors; console light grey (not white)
-                bg, fg = "#f0f0f0", "#1a1a1a"
-                input_bg, input_fg = "#ffffff", "#1a1a1a"
-                console_bg, console_fg = "#e5e5e5", "#1a1a1a"
-                muted, cb_hover = "#555555", "#0078d4"
-                btn_hover_bg, btn_border = "#e0e0e0", "#c0c0c0"
+                # Light: 90s retro Windows; console stays black (yellow text legibility)
+                bg, fg = "#c0c0c0", "#000000"
+                input_bg, input_fg = "#ffffff", "#000000"
+                console_bg, console_fg = "#0c0c0c", "#d4d4d4"
+                muted, cb_hover = "#404040", "#000080"
+                btn_hover_bg, btn_border = "#d4d0c8", "#808080"
+                cb_checked = f"background: #ffffff; border: 1px solid #808080; border-radius: 0; image: url({file_url(CHECK_BLACK)});"
+                input_border = "border: 2px inset; border-color: #808080 #c0c0c0 #c0c0c0 #808080;"
+                group_border = "border: 2px outset; border-color: #ffffff #808080 #808080 #ffffff; border-radius: 0;"
+                frame_border = "border: 2px inset; border-color: #808080 #c0c0c0 #c0c0c0 #808080; border-radius: 0;"
+                btn_border_style = "border: 2px outset; border-color: #ffffff #808080 #808080 #ffffff; border-radius: 0;"
             p = self.palette()
             p.setColor(QPalette.Window, QColor(bg))
             p.setColor(QPalette.WindowText, QColor(fg))
             p.setColor(QPalette.Base, QColor(input_bg))
-            p.setColor(QPalette.Text, QColor(console_fg))
+            p.setColor(QPalette.Text, QColor(fg))
             p.setColor(QPalette.Button, QColor(bg))
             p.setColor(QPalette.ButtonText, QColor(fg))
             self.setPalette(p)
             qss = f"""
                 QCheckBox {{ color: {fg}; padding: 2px; }}
                 QCheckBox:hover {{ color: {cb_hover}; }}
-                QCheckBox::indicator {{ background: {input_bg}; border: 1px solid {btn_border}; border-radius: 2px; }}
+                QCheckBox::indicator {{ background: {input_bg}; border: 1px solid {btn_border}; border-radius: 2px; width: 13px; height: 13px; }}
                 QCheckBox::indicator:hover {{ border: 1px solid {cb_hover}; background: {btn_hover_bg}; }}
-                QCheckBox::indicator:checked {{ background: {cb_hover}; border-color: {cb_hover}; }}
-                QLineEdit {{ background: {input_bg}; color: {input_fg}; padding: 2px; border: 1px solid {btn_border}; }}
-                QGroupBox {{ color: {fg}; font-weight: bold; padding-top: 6px; margin-top: 4px; border: 1px solid {btn_border}; border-radius: 4px; }}
+                QCheckBox::indicator:checked {{ {cb_checked} }}
+                QLineEdit {{ background: {input_bg}; color: {input_fg}; padding: 2px; {input_border} }}
+                QGroupBox {{ color: {fg}; font-weight: bold; padding-top: 6px; margin-top: 4px; {group_border} }}
                 QGroupBox::title {{ subcontrol-origin: margin; left: 8px; padding: 0 4px; color: {fg}; }}
-                QFrame {{ color: {fg}; border: 1px solid {btn_border}; padding: 4px; border-radius: 4px; }}
+                QFrame {{ color: {fg}; {frame_border} padding: 4px; }}
                 QLabel {{ color: {fg}; }}
                 #mutedLbl {{ font-size: 10px; color: {muted}; margin: 0; padding: 0; }}
-                QPushButton {{ border: 1px solid {btn_border}; border-radius: 4px; padding: 4px 8px; color: {fg}; background: {bg}; }}
+                QPushButton {{ {btn_border_style} padding: 4px 8px; color: {fg}; background: {bg}; }}
                 QPushButton:hover {{ border: 2px solid {cb_hover}; background: {btn_hover_bg}; }}
                 QPushButton:pressed {{ border: 2px solid {cb_hover}; background: {cb_hover}; color: white; }}
                 QPushButton:disabled {{ opacity: 0.5; }}

@@ -1,5 +1,12 @@
 # Changelog
 
+## 3.10.0 (2025-03-21)
+
+- **feat:** Visible checkmarks in checkboxes (white for dark, black for light) via custom SVG icons
+- **feat:** Light theme: 90s retro Windows style (#c0c0c0, 3D inset/outset borders, black text)
+- **feat:** Footer: "Check for updates" button; donate changed to "☕ Buy me a coffee"
+- **fix:** Console stays black in both themes (yellow text legibility)
+
 ## 3.9.9 (2025-03-21)
 
 - **feat:** Dark theme: Cursor-IDE / VS Code Dark+ (#1e1e1e) with 1px silver borders

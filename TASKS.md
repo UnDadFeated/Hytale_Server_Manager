@@ -6,6 +6,12 @@
 
 ## Completed by Version
 
+### 3.10.0 (2025-03-21)
+
+- [x] Checkbox checkmark visibility (check_white.svg, check_black.svg)
+- [x] Light theme: 90s retro Windows style; console black in both themes
+- [x] Footer: Check for updates button; Buy me a coffee donate button
+
 ### 3.9.9 (2025-03-21)
 
 - [x] Dark theme: Cursor-IDE (#1e1e1e), 1px silver borders
