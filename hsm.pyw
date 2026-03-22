@@ -54,7 +54,7 @@ if platform.system() == "Windows":
     # Also optionally use STARTUPINFO to hide things deeper if needed.
 else:
     CREATE_NO_WINDOW = 0
-__version__ = "3.10.5"
+__version__ = "3.10.6"
 
 
 
@@ -1596,12 +1596,9 @@ def run_gui_mode():
             self.cb_check_upd.setChecked(self.config.get("check_updates", True))
             self.cb_check_upd.stateChanged.connect(self.save)
             col2.addWidget(self.cb_check_upd)
-            mod_row = QHBoxLayout()
             mod_lbl = QLabel("(Uncheck if modded)")
             mod_lbl.setObjectName("mutedLbl")
-            mod_row.addWidget(mod_lbl)
-            mod_row.addStretch()
-            col2.addLayout(mod_row)
+            col2.addWidget(mod_lbl)
             bkp_row = QHBoxLayout()
             self.cb_backup = QCheckBox("Backup World on Start")
             self.cb_backup.setChecked(self.config.get("enable_backups", True))
@@ -1688,6 +1685,7 @@ def run_gui_mode():
             nav_col.addSpacing(4)
             self.lbl_status = QLabel("Status: Stopped")
             self.lbl_status.setStyleSheet("font-weight: bold;")
+            self.lbl_status.setMaximumHeight(18)
             nav_col.addWidget(self.lbl_status)
             controls_layout.addLayout(nav_col)
 
@@ -1744,8 +1742,10 @@ def run_gui_mode():
 
             footer_frame = QFrame()
             footer_frame.setObjectName("footerBar")
+            footer_frame.setMaximumHeight(32)
             footer = QHBoxLayout(footer_frame)
             footer.setSpacing(8)
+            footer.setContentsMargins(4, 2, 4, 2)
             theme_btn = QPushButton("Toggle Theme")
             theme_btn.clicked.connect(self.toggle_theme)
             footer.addWidget(theme_btn)
@@ -1875,23 +1875,25 @@ def run_gui_mode():
         def update_stats(self, status):
             def apply():
                 state = status.get("state", "Unknown")
-            if HAS_PSUTIL:
-                try:
-                    cpu_load = psutil.cpu_percent(interval=None)
-                    ram_load = psutil.virtual_memory().percent
-                    self.lbl_cpu.setText(f"CPU: {cpu_load}%")
-                    self.lbl_ram.setText(f"RAM: {ram_load}%")
-                except Exception:
-                    pass
-            else:
-                self.lbl_cpu.setText("CPU: N/A")
-                self.lbl_ram.setText("RAM: N/A")
+                if HAS_PSUTIL:
+                    try:
+                        cpu_load = psutil.cpu_percent(interval=None)
+                        ram_load = psutil.virtual_memory().percent
+                        self.lbl_cpu.setText(f"CPU: {cpu_load}%")
+                        self.lbl_ram.setText(f"RAM: {ram_load}%")
+                    except Exception:
+                        pass
+                else:
+                    self.lbl_cpu.setText("CPU: N/A")
+                    self.lbl_ram.setText("RAM: N/A")
                 if state == "Stopped":
                     self.btn_start.setEnabled(True)
                     self.btn_stop.setEnabled(False)
                     self.lbl_status.setText("Status: Stopped")
                     self.lbl_uptime.setText("Uptime: 00:00:00")
                 elif state == "Running":
+                    self.btn_start.setEnabled(False)
+                    self.btn_stop.setEnabled(True)
                     self.lbl_status.setText("Status: Running")
                     self.lbl_uptime.setText(f"Uptime: {status.get('uptime', '00:00:00')}")
             QTimer.singleShot(0, apply)
@@ -2003,7 +2005,7 @@ def run_gui_mode():
                 QGroupBox::title {{ subcontrol-origin: margin; left: 8px; padding: 0 4px; color: {fg}; }}
                 QFrame {{ color: {fg}; {frame_border} padding: 4px; }}
                 QLabel {{ color: {fg}; }}
-                #mutedLbl {{ font-size: 10px; color: {muted}; margin: 0; padding: 0; }}
+                #mutedLbl {{ font-size: 10px; color: {muted}; margin: 0; padding: 0; border: none; background: transparent; }}
                 QPushButton {{ {btn_border_style} padding: 4px 8px; color: {fg}; background: {btn_bg}; }}
                 QPushButton:hover {{ border: 2px solid {cb_hover}; background: {btn_hover_bg}; }}
                 QPushButton:pressed {{ border: 2px solid {cb_hover}; background: {cb_hover}; color: white; }}

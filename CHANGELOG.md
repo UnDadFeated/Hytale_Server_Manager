@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.10.6 (2025-03-22)
+
+- **fix:** Footer skinnier (max-height 32px, reduced margins)
+- **fix:** Remove box around "(Uncheck if modded)"; Status label skinnier (max-height 18px)
+- **fix:** Uptime not updating: update_stats logic was outside apply() when HAS_PSUTIL
+
 ## 3.10.5 (2025-03-22)
 
 - **fix:** Remove "| Comprehensive Server Management Tool" from header
