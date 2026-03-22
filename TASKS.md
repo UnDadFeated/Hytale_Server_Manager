@@ -6,6 +6,11 @@
 
 ## Completed by Version
 
+### 3.10.20 (2025-03-21)
+
+- [x] Config: "Do not update if modded" checkbox; mutually exclusive with "Check for updates"
+- [x] Remove "(Uncheck if modded)" label
+
 ### 3.10.19 (2025-03-21)
 
 - [x] CPU/RAM: psutil interval=0.1, update in _refresh_uptime (fix 0%)

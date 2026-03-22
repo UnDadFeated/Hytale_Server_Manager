@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.10.20 (2025-03-21)
+
+- **feat:** Config: "Do not update if modded" checkbox (mutually exclusive with "Check for new server updates")
+- **fix:** Remove "(Uncheck if modded)" label
+
 ## 3.10.19 (2025-03-21)
 
 - **fix:** CPU/RAM: use psutil.cpu_percent(interval=0.1); update in _refresh_uptime (fixes 0% display)

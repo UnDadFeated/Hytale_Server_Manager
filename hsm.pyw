@@ -60,7 +60,7 @@ if platform.system() == "Windows":
     # Also optionally use STARTUPINFO to hide things deeper if needed.
 else:
     CREATE_NO_WINDOW = 0
-__version__ = "3.10.19"
+__version__ = "3.10.20"
 JAVA_VERSION_REQ = 25
 SERVER_JAR = "HytaleServer.jar"
 UPDATER_ZIP_URL = "https://downloader.hytale.com/hytale-downloader.zip"
@@ -1616,11 +1616,12 @@ def run_gui_mode():
             col2.setSpacing(6)
             self.cb_check_upd = QCheckBox("Check for new server updates")
             self.cb_check_upd.setChecked(self.config.get("check_updates", True))
-            self.cb_check_upd.stateChanged.connect(self.save)
+            self.cb_check_upd.stateChanged.connect(lambda: self._on_check_updates_toggled())
             col2.addWidget(self.cb_check_upd)
-            mod_lbl = QLabel("(Uncheck if modded)")
-            mod_lbl.setObjectName("mutedLbl")
-            col2.addWidget(mod_lbl)
+            self.cb_no_update_modded = QCheckBox("Do not update if modded")
+            self.cb_no_update_modded.setChecked(not self.config.get("check_updates", True))
+            self.cb_no_update_modded.stateChanged.connect(lambda: self._on_no_update_modded_toggled())
+            col2.addWidget(self.cb_no_update_modded)
             bkp_row = QHBoxLayout()
             self.cb_backup = QCheckBox("Backup World on Start")
             self.cb_backup.setChecked(self.config.get("enable_backups", True))
@@ -1853,6 +1854,20 @@ def run_gui_mode():
         def stop_server(self):
             self.core.stop_server()
             self.btn_stop.setEnabled(False)
+
+        def _on_check_updates_toggled(self):
+            """Mutually exclusive: exactly one of Check for updates / Do not update if modded."""
+            self.cb_no_update_modded.blockSignals(True)
+            self.cb_no_update_modded.setChecked(not self.cb_check_upd.isChecked())
+            self.cb_no_update_modded.blockSignals(False)
+            self.save()
+
+        def _on_no_update_modded_toggled(self):
+            """Mutually exclusive: exactly one of Check for updates / Do not update if modded."""
+            self.cb_check_upd.blockSignals(True)
+            self.cb_check_upd.setChecked(not self.cb_no_update_modded.isChecked())
+            self.cb_check_upd.blockSignals(False)
+            self.save()
 
         def save(self):
             ch = self.entry_channel.text().strip()
