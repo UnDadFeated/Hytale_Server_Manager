@@ -6,6 +6,12 @@
 
 ## Completed by Version
 
+### 3.9.8 (2025-03-21)
+
+- [x] Dark theme: modern grey platform (#36393f), console black
+- [x] Light theme: legible contrast (console, labels, inputs)
+- [x] Theme-aware checkboxes, frames, muted labels
+
 ### 3.9.7 (2025-03-21)
 
 - [x] Single-instance detection (lock file, PID check)

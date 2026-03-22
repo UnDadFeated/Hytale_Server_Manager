@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.9.8 (2025-03-21)
+
+- **feat:** Dark theme: modern grey platform (Discord-like #36393f); console remains black
+- **fix:** Light theme legibility: dark text on light console, themed inputs, muted labels
+- **fix:** Theme-aware checkboxes, group boxes, frames; Discord integration section styling
+
 ## 3.9.7 (2025-03-21)
 
 - **feat:** Single-instance detection; prevents multiple hsm.pyw from fighting over server

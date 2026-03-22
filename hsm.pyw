@@ -54,7 +54,7 @@ if platform.system() == "Windows":
     # Also optionally use STARTUPINFO to hide things deeper if needed.
 else:
     CREATE_NO_WINDOW = 0
-__version__ = "3.9.7"
+__version__ = "3.9.8"
 
 
 
@@ -1581,7 +1581,7 @@ def run_gui_mode():
             self.cb_check_upd.stateChanged.connect(self.save)
             col2.addWidget(self.cb_check_upd)
             mod_lbl = QLabel("(Uncheck if modded)")
-            mod_lbl.setStyleSheet("font-size: 10px; color: grey;")
+            mod_lbl.setObjectName("mutedLbl")
             col2.addWidget(mod_lbl)
             bkp_row = QHBoxLayout()
             self.cb_backup = QCheckBox("Backup World on Start")
@@ -1612,7 +1612,6 @@ def run_gui_mode():
 
             dsc_box = QFrame()
             dsc_box.setFrameShape(QFrame.StyledPanel)
-            dsc_box.setStyleSheet("QFrame { border: 1px solid palette(mid); padding: 2px; }")
             dsc_layout = QVBoxLayout(dsc_box)
             dsc_layout.setContentsMargins(4, 4, 4, 4)
             dsc_layout.setSpacing(1)
@@ -1689,13 +1688,13 @@ def run_gui_mode():
             self.btn_stop.clicked.connect(self.stop_server)
             action_col.addWidget(self.btn_stop)
             ver_lbl = QLabel(f"Version: {self.config.get('last_server_version', 'Unknown')}")
-            ver_lbl.setStyleSheet("font-size: 10px; color: grey;")
+            ver_lbl.setObjectName("mutedLbl")
             action_col.addWidget(ver_lbl)
             stats_row = QHBoxLayout()
             self.lbl_cpu = QLabel("CPU: 0%")
             self.lbl_ram = QLabel("RAM: 0%")
-            self.lbl_cpu.setStyleSheet("font-size: 10px; color: grey;")
-            self.lbl_ram.setStyleSheet("font-size: 10px; color: grey;")
+            self.lbl_cpu.setObjectName("mutedLbl")
+            self.lbl_ram.setObjectName("mutedLbl")
             stats_row.addWidget(self.lbl_cpu)
             stats_row.addWidget(self.lbl_ram)
             action_col.addLayout(stats_row)
@@ -1912,30 +1911,47 @@ def run_gui_mode():
 
         def apply_theme(self):
             if self.is_dark:
-                bg, fg, txt_bg = "#121212", "#e0e0e0", "#0c0c0c"
-                cb_hover = "#4a7ac9"
-                btn_hover_bg = "#3a3a3a"
-                btn_border = "#5a5a5a"
+                # Modern grey platform (Discord-like); console stays black
+                bg, fg = "#36393f", "#dcddde"
+                txt_bg = "#40444b"
+                input_bg, input_fg = "#40444b", "#dcddde"
+                console_bg, console_fg = "#0c0c0c", "#d4d4d4"
+                muted = "#99aab5"
+                cb_hover = "#5865f2"
+                btn_hover_bg = "#4f545c"
+                btn_border = "#4f545c"
             else:
-                bg, fg, txt_bg = "#f5f5f5", "#1a1a1a", "#ffffff"
+                # Light theme: high contrast for legibility
+                bg, fg = "#f5f5f5", "#1a1a1a"
+                txt_bg = "#ffffff"
+                input_bg, input_fg = "#e8e8e8", "#1a1a1a"
+                console_bg, console_fg = "#f8f9fa", "#1a1a1a"
+                muted = "#555555"
                 cb_hover = "#2a6ac9"
-                btn_hover_bg = "#e8e8e8"
+                btn_hover_bg = "#e0e0e0"
                 btn_border = "#aaa"
             p = self.palette()
             p.setColor(QPalette.Window, QColor(bg))
             p.setColor(QPalette.WindowText, QColor(fg))
             p.setColor(QPalette.Base, QColor(txt_bg))
-            p.setColor(QPalette.Text, QColor("#d4d4d4" if self.is_dark else "#1a1a1a"))
-            p.setColor(QPalette.Button, QColor("#2d2d2d" if self.is_dark else "#e0e0e0"))
+            p.setColor(QPalette.Text, QColor(console_fg if not self.is_dark else "#d4d4d4"))
+            p.setColor(QPalette.Button, QColor("#4f545c" if self.is_dark else "#e0e0e0"))
             p.setColor(QPalette.ButtonText, QColor(fg))
+            p.setColor(QPalette.BrightText, QColor("#ffffff" if self.is_dark else "#1a1a1a"))
             self.setPalette(p)
-            input_bg = "#c8c8c8"
             qss = f"""
                 QCheckBox {{ color: {fg}; padding: 2px; }}
                 QCheckBox:hover {{ color: {cb_hover}; }}
-                QCheckBox::indicator:hover {{ border: 1px solid {cb_hover}; }}
-                QLineEdit {{ background: {input_bg}; color: #1a1a1a; padding: 2px; border: 1px solid {btn_border}; }}
-                QPushButton {{ border: 1px solid {btn_border}; border-radius: 4px; padding: 4px 8px; }}
+                QCheckBox::indicator {{ background: {input_bg}; border: 1px solid {btn_border}; border-radius: 2px; }}
+                QCheckBox::indicator:hover {{ border: 1px solid {cb_hover}; background: {btn_hover_bg}; }}
+                QCheckBox::indicator:checked {{ background: {cb_hover}; border-color: {cb_hover}; }}
+                QLineEdit {{ background: {input_bg}; color: {input_fg}; padding: 2px; border: 1px solid {btn_border}; }}
+                QGroupBox {{ color: {fg}; font-weight: bold; padding-top: 6px; margin-top: 4px; border: 1px solid {btn_border}; border-radius: 4px; }}
+                QGroupBox::title {{ subcontrol-origin: margin; left: 8px; padding: 0 4px; color: {fg}; }}
+                QFrame {{ color: {fg}; border: 1px solid {btn_border}; padding: 4px; border-radius: 4px; }}
+                QLabel {{ color: {fg}; }}
+                #mutedLbl {{ font-size: 10px; color: {muted}; }}
+                QPushButton {{ border: 1px solid {btn_border}; border-radius: 4px; padding: 4px 8px; color: {fg}; background: {bg}; }}
                 QPushButton:hover {{ border: 2px solid {cb_hover}; background: {btn_hover_bg}; }}
                 QPushButton:pressed {{ border: 2px solid {cb_hover}; background: {cb_hover}; color: white; }}
                 QPushButton:disabled {{ opacity: 0.5; }}
@@ -1947,7 +1963,7 @@ def run_gui_mode():
                 #btnStop:pressed {{ border: 2px solid #ff6b6b; background: #D13438; color: white; }}
             """
             self.setStyleSheet(qss)
-            self.console.setStyleSheet(f"QPlainTextEdit {{ background: {txt_bg}; color: #d4d4d4; font-family: Consolas; font-size: 11px; }}")
+            self.console.setStyleSheet(f"QPlainTextEdit {{ background: {console_bg}; color: {console_fg}; font-family: Consolas; font-size: 11px; }}")
 
         def toggle_theme(self):
             self.is_dark = not self.is_dark
