@@ -54,7 +54,7 @@ if platform.system() == "Windows":
     # Also optionally use STARTUPINFO to hide things deeper if needed.
 else:
     CREATE_NO_WINDOW = 0
-__version__ = "3.9.8"
+__version__ = "3.9.9"
 
 
 
@@ -1528,7 +1528,6 @@ def run_gui_mode():
             main.addLayout(header)
 
             controls = QGroupBox("Controls & Configuration")
-            controls.setStyleSheet("QGroupBox { font-weight: bold; padding-top: 4px; margin-top: 4px; }")
             controls_layout = QHBoxLayout(controls)
             controls_layout.setContentsMargins(6, 10, 6, 6)
             controls_layout.setSpacing(16)
@@ -1580,9 +1579,12 @@ def run_gui_mode():
             self.cb_check_upd.setChecked(self.config.get("check_updates", True))
             self.cb_check_upd.stateChanged.connect(self.save)
             col2.addWidget(self.cb_check_upd)
+            mod_row = QHBoxLayout()
             mod_lbl = QLabel("(Uncheck if modded)")
             mod_lbl.setObjectName("mutedLbl")
-            col2.addWidget(mod_lbl)
+            mod_row.addWidget(mod_lbl)
+            mod_row.addStretch()
+            col2.addLayout(mod_row)
             bkp_row = QHBoxLayout()
             self.cb_backup = QCheckBox("Backup World on Start")
             self.cb_backup.setChecked(self.config.get("enable_backups", True))
@@ -1910,34 +1912,28 @@ def run_gui_mode():
             return path or ""
 
         def apply_theme(self):
+            silver = "#6b6b6b"
             if self.is_dark:
-                # Modern grey platform (Discord-like); console stays black
-                bg, fg = "#36393f", "#dcddde"
-                txt_bg = "#40444b"
-                input_bg, input_fg = "#40444b", "#dcddde"
+                # Cursor-IDE / VS Code Dark+ theme; console black; 1px silver borders
+                bg, fg = "#1e1e1e", "#d4d4d4"
+                input_bg, input_fg = "#252526", "#d4d4d4"
                 console_bg, console_fg = "#0c0c0c", "#d4d4d4"
-                muted = "#99aab5"
-                cb_hover = "#5865f2"
-                btn_hover_bg = "#4f545c"
-                btn_border = "#4f545c"
+                muted, cb_hover = "#bbbbbb", "#569cd6"
+                btn_hover_bg, btn_border = "#2d2d30", silver
             else:
-                # Light theme: high contrast for legibility
-                bg, fg = "#f5f5f5", "#1a1a1a"
-                txt_bg = "#ffffff"
-                input_bg, input_fg = "#e8e8e8", "#1a1a1a"
-                console_bg, console_fg = "#f8f9fa", "#1a1a1a"
-                muted = "#555555"
-                cb_hover = "#2a6ac9"
-                btn_hover_bg = "#e0e0e0"
-                btn_border = "#aaa"
+                # Light: default Windows colors; console light grey (not white)
+                bg, fg = "#f0f0f0", "#1a1a1a"
+                input_bg, input_fg = "#ffffff", "#1a1a1a"
+                console_bg, console_fg = "#e5e5e5", "#1a1a1a"
+                muted, cb_hover = "#555555", "#0078d4"
+                btn_hover_bg, btn_border = "#e0e0e0", "#c0c0c0"
             p = self.palette()
             p.setColor(QPalette.Window, QColor(bg))
             p.setColor(QPalette.WindowText, QColor(fg))
-            p.setColor(QPalette.Base, QColor(txt_bg))
-            p.setColor(QPalette.Text, QColor(console_fg if not self.is_dark else "#d4d4d4"))
-            p.setColor(QPalette.Button, QColor("#4f545c" if self.is_dark else "#e0e0e0"))
+            p.setColor(QPalette.Base, QColor(input_bg))
+            p.setColor(QPalette.Text, QColor(console_fg))
+            p.setColor(QPalette.Button, QColor(bg))
             p.setColor(QPalette.ButtonText, QColor(fg))
-            p.setColor(QPalette.BrightText, QColor("#ffffff" if self.is_dark else "#1a1a1a"))
             self.setPalette(p)
             qss = f"""
                 QCheckBox {{ color: {fg}; padding: 2px; }}
@@ -1950,7 +1946,7 @@ def run_gui_mode():
                 QGroupBox::title {{ subcontrol-origin: margin; left: 8px; padding: 0 4px; color: {fg}; }}
                 QFrame {{ color: {fg}; border: 1px solid {btn_border}; padding: 4px; border-radius: 4px; }}
                 QLabel {{ color: {fg}; }}
-                #mutedLbl {{ font-size: 10px; color: {muted}; }}
+                #mutedLbl {{ font-size: 10px; color: {muted}; margin: 0; padding: 0; }}
                 QPushButton {{ border: 1px solid {btn_border}; border-radius: 4px; padding: 4px 8px; color: {fg}; background: {bg}; }}
                 QPushButton:hover {{ border: 2px solid {cb_hover}; background: {btn_hover_bg}; }}
                 QPushButton:pressed {{ border: 2px solid {cb_hover}; background: {cb_hover}; color: white; }}

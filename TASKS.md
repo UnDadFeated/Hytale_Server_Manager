@@ -6,6 +6,12 @@
 
 ## Completed by Version
 
+### 3.9.9 (2025-03-21)
+
+- [x] Dark theme: Cursor-IDE (#1e1e1e), 1px silver borders
+- [x] Light theme: Windows default bg, light grey console
+- [x] Compact "(Uncheck if modded)" label; remove redundant stylesheet
+
 ### 3.9.8 (2025-03-21)
 
 - [x] Dark theme: modern grey platform (#36393f), console black

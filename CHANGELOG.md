@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.9.9 (2025-03-21)
+
+- **feat:** Dark theme: Cursor-IDE / VS Code Dark+ (#1e1e1e) with 1px silver borders
+- **fix:** Light theme: default Windows colors (#f0f0f0), console light grey (#e5e5e5)
+- **fix:** Compact "(Uncheck if modded)" label layout; remove redundant QGroupBox stylesheet
+
 ## 3.9.8 (2025-03-21)
 
 - **feat:** Dark theme: modern grey platform (Discord-like #36393f); console remains black
