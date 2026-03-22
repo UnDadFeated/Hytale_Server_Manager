@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.10.4 (2025-03-22)
+
+- **fix:** Light mode: checkbox selection visible (dark grey bg + white check)
+- **fix:** Dark mode: buttons/footer #181818 (not black); consistent config labels (no green labels)
+
 ## 3.10.3 (2025-03-22)
 
 - **fix:** Check for updates: actually run installer and restart (was only logging)

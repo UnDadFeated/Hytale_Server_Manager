@@ -6,6 +6,11 @@
 
 ## Completed by Version
 
+### 3.10.4 (2025-03-22)
+
+- [x] Light: checkbox checked = dark grey + white check (visible)
+- [x] Dark: buttons/footer grey #181818; consistent fg labels
+
 ### 3.10.3 (2025-03-22)
 
 - [x] Check for updates: run installer and restart

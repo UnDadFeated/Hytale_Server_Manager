@@ -54,7 +54,7 @@ if platform.system() == "Windows":
     # Also optionally use STARTUPINFO to hide things deeper if needed.
 else:
     CREATE_NO_WINDOW = 0
-__version__ = "3.10.3"
+__version__ = "3.10.4"
 
 
 
@@ -1733,6 +1733,7 @@ def run_gui_mode():
             main.addWidget(self.console, 1)
 
             cmd_frame = QFrame()
+            cmd_frame.setObjectName("cmdBar")
             cmd_layout = QHBoxLayout(cmd_frame)
             cmd_layout.setContentsMargins(0, 2, 0, 2)
             cmd_layout.addWidget(QLabel("Command:"))
@@ -1742,7 +1743,9 @@ def run_gui_mode():
             cmd_layout.addWidget(self.entry_cmd)
             main.addWidget(cmd_frame)
 
-            footer = QHBoxLayout()
+            footer_frame = QFrame()
+            footer_frame.setObjectName("footerBar")
+            footer = QHBoxLayout(footer_frame)
             footer.setSpacing(8)
             theme_btn = QPushButton("Toggle Theme")
             theme_btn.clicked.connect(self.toggle_theme)
@@ -1764,7 +1767,7 @@ def run_gui_mode():
             btn_coffee = QPushButton("☕ Buy me a coffee")
             btn_coffee.clicked.connect(self.open_donation_link)
             footer.addWidget(btn_coffee)
-            main.addLayout(footer)
+            main.addWidget(footer_frame)
 
         def browse_aot(self):
             path, _ = QFileDialog.getOpenFileName(self, "Select AOT File", "", "AOT Files (*.aot);;All Files (*)")
@@ -1955,30 +1958,31 @@ def run_gui_mode():
             check_w = icon_url(CHECK_WHITE_PNG)
             check_b = icon_url(CHECK_BLACK_PNG)
             if self.is_dark:
-                # Cursor-IDE palette (7.png): charcoal layers, 1px silver borders
+                # Cursor-IDE palette: charcoal layers; buttons/footer grey (not black); consistent labels
                 bg, fg = "#0b0b0b", "#e0e0e0"
                 input_bg, input_fg = "#1e1e1e", "#e0e0e0"
                 console_bg, console_fg = "#0c0c0c", "#d4d4d4"
                 muted, cb_hover = "#9d9d9d", "#3fb950"
-                btn_hover_bg, btn_border = "#202020", "#333333"
+                btn_bg, btn_hover_bg, btn_border = "#181818", "#202020", "#333333"
                 cb_checked = f"background: {cb_hover}; border-color: {cb_hover}; image: url({check_w!r});"
                 input_border = f"border: 1px solid {btn_border};"
                 group_border = f"border: 1px solid {btn_border}; border-radius: 4px; background: {input_bg};"
                 frame_border = f"border: 1px solid {btn_border}; border-radius: 4px; background: {input_bg};"
                 btn_border_style = f"border: 1px solid {btn_border}; border-radius: 4px;"
+                footer_bg = "#181818"
             else:
-                # Light: 90s retro Windows (match grey button face #d4d0c8); console stays black
+                # Light: 90s retro Windows; checkbox checked = dark grey + white check (visible)
                 bg, fg = "#d4d0c8", "#000000"
                 input_bg, input_fg = "#ffffff", "#000000"
                 console_bg, console_fg = "#0c0c0c", "#d4d4d4"
                 muted, cb_hover = "#404040", "#000080"
-                btn_hover_bg = "#d4d0c8"
-                btn_border = "#808080"
-                cb_checked = f"background: #ffffff; border: 1px solid #808080; border-radius: 0; image: url({check_b!r});"
+                btn_bg, btn_hover_bg, btn_border = "#d4d0c8", "#d4d0c8", "#808080"
+                cb_checked = f"background: #404040; border: 1px solid #808080; border-radius: 0; image: url({check_w!r});"
                 input_border = "border: 2px inset; border-color: #808080 #c0c0c0 #c0c0c0 #808080;"
                 group_border = "border: 2px outset; border-color: #ffffff #808080 #808080 #ffffff; border-radius: 0;"
                 frame_border = "border: 2px inset; border-color: #808080 #c0c0c0 #c0c0c0 #808080; border-radius: 0;"
                 btn_border_style = "border: 2px outset; border-color: #ffffff #808080 #808080 #ffffff; border-radius: 0;"
+                footer_bg = bg
             p = self.palette()
             p.setColor(QPalette.Window, QColor(bg))
             p.setColor(QPalette.WindowText, QColor(fg))
@@ -1989,8 +1993,9 @@ def run_gui_mode():
             self.setPalette(p)
             qss = f"""
                 QMainWindow, QWidget {{ background: {bg}; }}
+                #footerBar, #cmdBar {{ background: {footer_bg}; }}
                 QCheckBox {{ color: {fg}; padding: 2px; }}
-                QCheckBox:hover {{ color: {cb_hover}; }}
+                QCheckBox:hover {{ color: {fg}; }}
                 QCheckBox::indicator {{ background: {input_bg}; border: 1px solid {btn_border}; border-radius: 2px; width: 13px; height: 13px; }}
                 QCheckBox::indicator:hover {{ border: 1px solid {cb_hover}; background: {btn_hover_bg}; }}
                 QCheckBox::indicator:checked {{ {cb_checked} }}
@@ -2000,7 +2005,7 @@ def run_gui_mode():
                 QFrame {{ color: {fg}; {frame_border} padding: 4px; }}
                 QLabel {{ color: {fg}; }}
                 #mutedLbl {{ font-size: 10px; color: {muted}; margin: 0; padding: 0; }}
-                QPushButton {{ {btn_border_style} padding: 4px 8px; color: {fg}; background: {bg}; }}
+                QPushButton {{ {btn_border_style} padding: 4px 8px; color: {fg}; background: {btn_bg}; }}
                 QPushButton:hover {{ border: 2px solid {cb_hover}; background: {btn_hover_bg}; }}
                 QPushButton:pressed {{ border: 2px solid {cb_hover}; background: {cb_hover}; color: white; }}
                 QPushButton:disabled {{ opacity: 0.5; }}
