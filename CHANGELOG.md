@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.10.16 (2025-03-21)
+
+- **chore:** Module docstring; section comments (Constants, Config, Core, CLI, GUI, Main)
+- **chore:** Replace bare `except:` with `except OSError` or `except Exception`
+- **chore:** README: new screenshot, platform badge (Windows | Linux | macOS), version link to CHANGELOG
+
 ## 3.10.15 (2025-03-21)
 
 - **fix:** Uptime counter: add GUI-side QTimer polling `core.get_uptime_str()` every second

@@ -6,6 +6,11 @@
 
 ## Completed by Version
 
+### 3.10.16 (2025-03-21)
+
+- [x] Code cleanup: docstring, section comments, bare except fixes
+- [x] README: new screenshot, platform badge, CHANGELOG link
+
 ### 3.10.15 (2025-03-21)
 
 - [x] Uptime counter: GUI polling via get_uptime_str() every 1s

@@ -1,3 +1,8 @@
+"""
+Hytale Server Manager - GUI and console automation for Hytale dedicated servers.
+
+Manages server lifecycle, updates, backups, Discord integration, and systemd/autostart.
+"""
 import os
 import sys
 import datetime
@@ -48,17 +53,14 @@ except ImportError as e:
     psutil = None
     _debug("IMPORT", f"psutil FAIL: {e}")
 
+# --- Constants ---
 # Windows flag for hiding child console windows.
 if platform.system() == "Windows":
     CREATE_NO_WINDOW = 0x08000000
     # Also optionally use STARTUPINFO to hide things deeper if needed.
 else:
     CREATE_NO_WINDOW = 0
-__version__ = "3.10.15"
-
-
-
-
+__version__ = "3.10.16"
 JAVA_VERSION_REQ = 25
 SERVER_JAR = "HytaleServer.jar"
 UPDATER_ZIP_URL = "https://downloader.hytale.com/hytale-downloader.zip"
@@ -95,6 +97,7 @@ except ImportError:
     _debug("IMPORT", "discord skip (optional)")
 
 
+# --- Locking & Dependencies ---
 def _acquire_single_instance_lock():
     """Returns (True, None) if we got the lock, else (False, error_msg)."""
     try:
@@ -244,6 +247,7 @@ def _show_missing_deps_and_offer_install(missing):
     return False
 
 
+# --- Configuration ---
 def validate_config(config):
     """
     Validates and corrects configuration values to prevent runtime errors.
@@ -310,6 +314,7 @@ def save_config(config):
     except Exception as e:
         print(f"Error saving config: {e}")
 
+# --- Core Logic ---
 class HytaleUpdaterCore:
     """
     Core logic controller for the Hytale Server Manager.
@@ -500,7 +505,8 @@ class HytaleUpdaterCore:
             if os.path.exists(cand):
                  if not IS_WINDOWS and not os.access(cand, os.X_OK):
                      try: os.chmod(cand, 0o755)
-                     except: pass
+                     except OSError:
+                         pass
                  return [f"./{cand}"] if not IS_WINDOWS else [cand]
 
         if os.path.exists("hytale-downloader.jar"):
@@ -546,7 +552,8 @@ class HytaleUpdaterCore:
                 if os.path.exists(cand):
                     if not IS_WINDOWS and not os.access(cand, os.X_OK):
                         try: os.chmod(cand, 0o755)
-                        except: pass
+                        except OSError:
+                            pass
                     return [f"./{cand}"] if not IS_WINDOWS else [cand]
             
             # Fallback scan for any extracted binary
@@ -745,7 +752,7 @@ def is_pid_running(p):
         else:
             os.kill(p, 0)
             return True
-    except:
+    except Exception:
         return False
 
 try:
@@ -1033,7 +1040,8 @@ except Exception as e:
                     p = os.path.join(staging_dir, f)
                     if os.path.exists(p):
                         try: os.remove(p)
-                        except: pass
+                        except OSError:
+                            pass
                 
                 # Cleanup OLD zips (Prune cache)
                 # We want to keep ONLY the zip that matches remote_version (or the one we just installed)
@@ -1090,7 +1098,8 @@ except Exception as e:
             if len(backups) > max_b:
                 for old in backups[:-max_b]:
                     try: os.remove(os.path.join(BACKUP_DIR, old))
-                    except: pass
+                    except OSError:
+                        pass
         except Exception as e:
             self.log(f"Backup failed: {e}")
 
@@ -1364,6 +1373,7 @@ except Exception as e:
         self.restart_timer.start()
 
 
+# --- CLI Utilities ---
 def install_service():
     """Installs the manager as a systemd service (Linux only)."""
     if not IS_LINUX:
@@ -1437,6 +1447,7 @@ Terminal=false
     except Exception as e:
         print(f"Failed to enable auto-start: {e}")
 
+# --- Modes ---
 def run_console_mode():
     """Runs the updater in console-only mode."""
     def console_logger(message, tag=None):
@@ -1474,6 +1485,7 @@ def run_console_mode():
     except KeyboardInterrupt:
         core.stop_server()
 
+# --- GUI ---
 def run_gui_mode():
     """Starts the graphical user interface."""
     _debug("GUI", "run_gui_mode() entered")
@@ -2115,6 +2127,7 @@ def print_help():
     print("=" * 60)
     sys.exit(0)
 
+# --- Main ---
 def main():
     """Main entry point."""
     _debug("MAIN", "entering main()")
@@ -2133,12 +2146,14 @@ def main():
     # Cleanup temporary update files
     if os.path.exists("updater_installer.py"):
         try: os.remove("updater_installer.py")
-        except: pass
+        except OSError:
+            pass
         
     for f in ["version.py.new", "hsm.py.new", "hsm.pyw.new"]:
          if os.path.exists(f):
              try: os.remove(f)
-             except: pass
+             except OSError:
+                 pass
 
     if "-help" in sys.argv or "--help" in sys.argv:
         _debug("MAIN", "print_help and exit")
