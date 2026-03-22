@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.10.11 (2025-03-22)
+
+- **fix:** Status label: remove max-height, add padding (fix descender cut-off on "Stopped")
+
 ## 3.10.10 (2025-03-22)
 
 - **fix:** Footer: buttons and checkbox labels nudged up 2px for vertical centering

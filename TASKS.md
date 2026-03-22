@@ -6,6 +6,10 @@
 
 ## Completed by Version
 
+### 3.10.11 (2025-03-22)
+
+- [x] Status label: fix "Stopped" descenders cut off
+
 ### 3.10.10 (2025-03-22)
 
 - [x] Footer: buttons and checkbox text centered (margin-top -2px)

@@ -54,7 +54,7 @@ if platform.system() == "Windows":
     # Also optionally use STARTUPINFO to hide things deeper if needed.
 else:
     CREATE_NO_WINDOW = 0
-__version__ = "3.10.10"
+__version__ = "3.10.11"
 
 
 
@@ -1686,7 +1686,6 @@ def run_gui_mode():
             self.lbl_status = QLabel("Status: Stopped")
             self.lbl_status.setObjectName("statusLbl")
             self.lbl_status.setStyleSheet("font-weight: bold;")
-            self.lbl_status.setMaximumHeight(18)
             nav_col.addWidget(self.lbl_status)
             controls_layout.addLayout(nav_col)
 
@@ -2012,7 +2011,7 @@ def run_gui_mode():
                 QFrame {{ color: {fg}; {frame_border} padding: 4px; }}
                 QLabel {{ color: {fg}; border: none; background: transparent; }}
                 #mutedLbl {{ font-size: 10px; color: {muted}; margin: 0; padding: 0; }}
-                #statusLbl {{ border: none; background: transparent; }}
+                #statusLbl {{ border: none; background: transparent; padding: 2px 0; min-height: 1.2em; }}
                 QPushButton {{ {btn_border_style} padding: 4px 8px; color: {fg}; background: {btn_bg}; }}
                 QPushButton:hover {{ border: 2px solid {cb_hover}; background: {btn_hover_bg}; }}
                 QPushButton:pressed {{ border: 2px solid {cb_hover}; background: {cb_hover}; color: white; }}
