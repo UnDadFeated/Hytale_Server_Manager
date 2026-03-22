@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.10.9 (2025-03-22)
+
+- **fix:** Footer: skinny (34px), buttons 24px height, font 10px, padding 2px 6px (no text cut-off)
+
 ## 3.10.8 (2025-03-22)
 
 - **fix:** Footer buttons: min-height 24px, padding 6px 10px (text no longer cut off)

@@ -6,6 +6,10 @@
 
 ## Completed by Version
 
+### 3.10.9 (2025-03-22)
+
+- [x] Footer: skinny, smaller buttons (24px), 10px font, no cut-off
+
 ### 3.10.8 (2025-03-22)
 
 - [x] Footer button text not cut off; config col spacing even

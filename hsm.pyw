@@ -54,7 +54,7 @@ if platform.system() == "Windows":
     # Also optionally use STARTUPINFO to hide things deeper if needed.
 else:
     CREATE_NO_WINDOW = 0
-__version__ = "3.10.8"
+__version__ = "3.10.9"
 
 
 
@@ -1743,13 +1743,17 @@ def run_gui_mode():
 
             footer_frame = QFrame()
             footer_frame.setObjectName("footerBar")
-            footer_frame.setMaximumHeight(44)
+            footer_frame.setMaximumHeight(34)
             footer = QHBoxLayout(footer_frame)
-            footer.setSpacing(8)
-            footer.setContentsMargins(6, 4, 6, 6)
+            footer.setSpacing(6)
+            footer.setContentsMargins(4, 2, 4, 4)
             theme_btn = QPushButton("Toggle Theme")
+            theme_btn.setFixedHeight(24)
             theme_btn.clicked.connect(self.toggle_theme)
             footer.addWidget(theme_btn)
+            btn_check = QPushButton("Check for updates")
+            btn_check.setFixedHeight(24)
+            btn_check.clicked.connect(self.check_updates_ui)
             self.cb_mgr_update = QCheckBox("Auto-Update Manager")
             self.cb_mgr_update.setChecked(self.config.get("manager_auto_update", True))
             self.cb_mgr_update.stateChanged.connect(self.save)
@@ -1761,10 +1765,9 @@ def run_gui_mode():
                 self.cb_start_win.setEnabled(False)
             footer.addWidget(self.cb_start_win)
             footer.addStretch()
-            btn_check = QPushButton("Check for updates")
-            btn_check.clicked.connect(self.check_updates_ui)
             footer.addWidget(btn_check)
             btn_coffee = QPushButton("☕ Buy me a coffee")
+            btn_coffee.setFixedHeight(24)
             btn_coffee.clicked.connect(self.open_donation_link)
             footer.addWidget(btn_coffee)
             main.addWidget(footer_frame)
@@ -1996,7 +1999,7 @@ def run_gui_mode():
             qss = f"""
                 QMainWindow, QWidget {{ background: {bg}; }}
                 #footerBar, #cmdBar {{ background: {footer_bg}; }}
-                #footerBar QPushButton {{ min-height: 24px; padding: 6px 10px; }}
+                #footerBar QPushButton {{ font-size: 10px; padding: 2px 6px; min-height: 20px; }}
                 QCheckBox {{ color: {fg}; padding: 2px; background-color: transparent; }}
                 QCheckBox:hover {{ color: {fg}; }}
                 QCheckBox::indicator {{ background: {input_bg}; border: 1px solid {btn_border}; border-radius: 2px; width: 13px; height: 13px; }}
