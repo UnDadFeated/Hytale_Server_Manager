@@ -1794,7 +1794,7 @@ def run_gui_mode():
             footer.addWidget(self.cb_start_win)
             footer.addStretch()
             footer.addWidget(btn_check)
-            btn_coffee = QPushButton("☕ Buy me a coffee")
+            btn_coffee = QPushButton("Support the Development")
             btn_coffee.setFixedHeight(24)
             btn_coffee.clicked.connect(self.open_donation_link)
             footer.addWidget(btn_coffee)
