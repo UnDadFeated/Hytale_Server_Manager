@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.10.15 (2025-03-21)
+
+- **fix:** Uptime counter: add GUI-side QTimer polling `core.get_uptime_str()` every second
+- **fix:** Action column: center CPU, RAM, and uptime labels under Start/Stop buttons (AlignHCenter)
+
 ## 3.10.14 (2025-03-22)
 
 - **fix:** Footer: reduced padding; vertically center buttons/checkboxes (AlignVCenter)

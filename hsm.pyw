@@ -54,7 +54,7 @@ if platform.system() == "Windows":
     # Also optionally use STARTUPINFO to hide things deeper if needed.
 else:
     CREATE_NO_WINDOW = 0
-__version__ = "3.10.14"
+__version__ = "3.10.15"
 
 
 
@@ -352,6 +352,13 @@ class HytaleUpdaterCore:
         """Updates the status via the callback."""
         if self.status_callback:
             self.status_callback(status)
+
+    def get_uptime_str(self):
+        """Returns current uptime string if server is running, else '00:00:00'."""
+        if self.server_process and self.server_process.poll() is None and self.start_time:
+            uptime = datetime.datetime.now() - self.start_time
+            return str(uptime).split('.')[0]
+        return "00:00:00"
 
     def start_discord_bot(self):
         """Starts the Discord Bot in a separate thread."""
@@ -1525,6 +1532,9 @@ def run_gui_mode():
             self.log_timer = QTimer(self)
             self.log_timer.timeout.connect(self.drain_log_queue)
             self.log_timer.start(80)
+            self.uptime_timer = QTimer(self)
+            self.uptime_timer.timeout.connect(self._refresh_uptime)
+            self.uptime_timer.start(1000)
 
             if self.config.get("auto_start", False):
                 QTimer.singleShot(1000, self.start_server)
@@ -1706,7 +1716,7 @@ def run_gui_mode():
             action_col.addWidget(self.btn_stop)
             ver_lbl = QLabel(f"Version: {self.config.get('last_server_version', 'Unknown')}")
             ver_lbl.setObjectName("mutedLbl")
-            action_col.addWidget(ver_lbl)
+            action_col.addWidget(ver_lbl, 0, Qt.AlignHCenter)
             stats_row = QHBoxLayout()
             self.lbl_cpu = QLabel("CPU: 0%")
             self.lbl_ram = QLabel("RAM: 0%")
@@ -1714,10 +1724,12 @@ def run_gui_mode():
             self.lbl_ram.setObjectName("mutedLbl")
             stats_row.addWidget(self.lbl_cpu)
             stats_row.addWidget(self.lbl_ram)
-            action_col.addLayout(stats_row)
+            stats_container = QWidget()
+            stats_container.setLayout(stats_row)
+            action_col.addWidget(stats_container, 0, Qt.AlignHCenter)
             self.lbl_uptime = QLabel("Uptime: 00:00:00")
             self.lbl_uptime.setStyleSheet("font-size: 10px;")
-            action_col.addWidget(self.lbl_uptime)
+            action_col.addWidget(self.lbl_uptime, 0, Qt.AlignHCenter)
             controls_layout.addLayout(action_col)
 
             main.addWidget(controls)
@@ -1875,6 +1887,12 @@ def run_gui_mode():
                     winreg.CloseKey(key)
                 except Exception as e:
                     QMessageBox.critical(self, "Error", f"Failed to set registry key: {e}")
+
+        def _refresh_uptime(self):
+            """Refresh uptime label from core (called every second)."""
+            s = self.core.get_uptime_str()
+            if self.lbl_uptime.text() != f"Uptime: {s}":
+                self.lbl_uptime.setText(f"Uptime: {s}")
 
         def update_stats(self, status):
             def apply():

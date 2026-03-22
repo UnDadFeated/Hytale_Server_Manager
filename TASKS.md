@@ -6,6 +6,11 @@
 
 ## Completed by Version
 
+### 3.10.15 (2025-03-21)
+
+- [x] Uptime counter: GUI polling via get_uptime_str() every 1s
+- [x] Center CPU, RAM, uptime under buttons (AlignHCenter)
+
 ### 3.10.14 (2025-03-22)
 
 - [x] Footer: lower padding, center buttons vertically
