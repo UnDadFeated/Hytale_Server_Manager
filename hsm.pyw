@@ -54,7 +54,7 @@ if platform.system() == "Windows":
     # Also optionally use STARTUPINFO to hide things deeper if needed.
 else:
     CREATE_NO_WINDOW = 0
-__version__ = "3.10.0"
+__version__ = "3.10.1"
 
 
 
@@ -77,8 +77,8 @@ WORLD_DIR = "universe/worlds"
 # This ensures the manager works correctly when launched by Windows at startup
 # (which sets CWD to System32 by default).
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-CHECK_WHITE = os.path.join(BASE_DIR, "check_white.svg").replace("\\", "/")
-CHECK_BLACK = os.path.join(BASE_DIR, "check_black.svg").replace("\\", "/")
+CHECK_WHITE_PNG = os.path.join(BASE_DIR, ".check_white.png")
+CHECK_BLACK_PNG = os.path.join(BASE_DIR, ".check_black.png")
 LOG_FILE = os.path.join(BASE_DIR, "hsm.log")
 CONFIG_FILE = os.path.join(BASE_DIR, "hsm.conf")
 LOCK_FILE = os.path.join(BASE_DIR, ".hsm.lock")
@@ -1481,8 +1481,24 @@ def run_gui_mode():
     from PySide6.QtCore import Qt, QTimer, QUrl
     _debug("GUI", "PySide6.QtCore OK")
     _debug("GUI", "importing PySide6.QtGui...")
-    from PySide6.QtGui import QPalette, QColor, QFont, QTextCursor, QTextCharFormat
+    from PySide6.QtGui import QPalette, QColor, QFont, QTextCursor, QTextCharFormat, QImage, QPainter, QPen, QBrush
     _debug("GUI", "PySide6.QtGui OK")
+
+    def ensure_check_icons():
+        """Create checkmark PNGs if missing (Qt loads PNG more reliably than SVG)."""
+        for path, fg in [(CHECK_WHITE_PNG, QColor(255, 255, 255)), (CHECK_BLACK_PNG, QColor(0, 0, 0))]:
+            if os.path.exists(path):
+                continue
+            img = QImage(14, 14, QImage.Format_ARGB32)
+            img.fill(0)
+            p = QPainter(img)
+            p.setRenderHint(QPainter.Antialiasing)
+            p.setPen(QPen(fg, 2.5))
+            p.setBrush(Qt.NoBrush)
+            p.drawLine(2, 7, 5, 10)
+            p.drawLine(5, 10, 12, 2)
+            p.end()
+            img.save(path)
 
     class HytaleGUI(QMainWindow):
         """Graphical User Interface for the Hytale Server Manager using PySide6."""
@@ -1924,7 +1940,12 @@ def run_gui_mode():
 
         def apply_theme(self):
             silver = "#6b6b6b"
-            def file_url(p): return "file:///" + os.path.abspath(p).replace("\\", "/")
+            from urllib.parse import quote
+            def icon_url(p):
+                path = os.path.abspath(p).replace("\\", "/")
+                return "file:///" + quote(path, safe="/:")
+            check_w = icon_url(CHECK_WHITE_PNG)
+            check_b = icon_url(CHECK_BLACK_PNG)
             if self.is_dark:
                 # Cursor-IDE / VS Code Dark+ theme; console black; 1px silver borders
                 bg, fg = "#1e1e1e", "#d4d4d4"
@@ -1932,19 +1953,20 @@ def run_gui_mode():
                 console_bg, console_fg = "#0c0c0c", "#d4d4d4"
                 muted, cb_hover = "#bbbbbb", "#569cd6"
                 btn_hover_bg, btn_border = "#2d2d30", silver
-                cb_checked = f"background: {cb_hover}; border-color: {cb_hover}; image: url({file_url(CHECK_WHITE)});"
+                cb_checked = f"background: {cb_hover}; border-color: {cb_hover}; image: url({check_w!r});"
                 input_border = f"border: 1px solid {btn_border};"
                 group_border = f"border: 1px solid {btn_border}; border-radius: 4px;"
                 frame_border = f"border: 1px solid {btn_border}; border-radius: 4px;"
                 btn_border_style = f"border: 1px solid {btn_border}; border-radius: 4px;"
             else:
-                # Light: 90s retro Windows; console stays black (yellow text legibility)
-                bg, fg = "#c0c0c0", "#000000"
+                # Light: 90s retro Windows (match grey button face #d4d0c8); console stays black
+                bg, fg = "#d4d0c8", "#000000"
                 input_bg, input_fg = "#ffffff", "#000000"
                 console_bg, console_fg = "#0c0c0c", "#d4d4d4"
                 muted, cb_hover = "#404040", "#000080"
-                btn_hover_bg, btn_border = "#d4d0c8", "#808080"
-                cb_checked = f"background: #ffffff; border: 1px solid #808080; border-radius: 0; image: url({file_url(CHECK_BLACK)});"
+                btn_hover_bg = "#d4d0c8"
+                btn_border = "#808080"
+                cb_checked = f"background: #ffffff; border: 1px solid #808080; border-radius: 0; image: url({check_b!r});"
                 input_border = "border: 2px inset; border-color: #808080 #c0c0c0 #c0c0c0 #808080;"
                 group_border = "border: 2px outset; border-color: #ffffff #808080 #808080 #ffffff; border-radius: 0;"
                 frame_border = "border: 2px inset; border-color: #808080 #c0c0c0 #c0c0c0 #808080; border-radius: 0;"
@@ -2012,6 +2034,7 @@ def run_gui_mode():
         app = QApplication(sys.argv)
     _debug("GUI", f"QApplication OK | style=Fusion")
     app.setStyle("Fusion")
+    ensure_check_icons()
     _debug("GUI", "creating HytaleGUI window...")
     window = HytaleGUI()
     _debug("GUI", "calling window.show()...")

@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.10.1 (2025-03-21)
+
+- **fix:** Light theme GUI background now uses Windows retro grey (#d4d0c8)
+- **fix:** Checkbox checkmarks: generate PNG at runtime (Qt loads reliably); remove SVG
+
 ## 3.10.0 (2025-03-21)
 
 - **feat:** Visible checkmarks in checkboxes (white for dark, black for light) via custom SVG icons

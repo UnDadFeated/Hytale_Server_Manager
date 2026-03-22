@@ -6,6 +6,11 @@
 
 ## Completed by Version
 
+### 3.10.1 (2025-03-21)
+
+- [x] Light theme: GUI bg #d4d0c8 (match retro grey button)
+- [x] Checkbox: runtime PNG generation for visible checkmarks
+
 ### 3.10.0 (2025-03-21)
 
 - [x] Checkbox checkmark visibility (check_white.svg, check_black.svg)
