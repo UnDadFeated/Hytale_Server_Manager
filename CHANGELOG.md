@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.10.5 (2025-03-22)
+
+- **fix:** Remove "| Comprehensive Server Management Tool" from header
+- **fix:** Dark mode: checkbox labels transparent background (no black bg)
+
 ## 3.10.4 (2025-03-22)
 
 - **fix:** Light mode: checkbox selection visible (dark grey bg + white check)

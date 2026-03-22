@@ -54,7 +54,7 @@ if platform.system() == "Windows":
     # Also optionally use STARTUPINFO to hide things deeper if needed.
 else:
     CREATE_NO_WINDOW = 0
-__version__ = "3.10.4"
+__version__ = "3.10.5"
 
 
 
@@ -1541,7 +1541,6 @@ def run_gui_mode():
             title = QLabel(f"Hytale Server Manager v{__version__}")
             title.setStyleSheet("font-weight: bold; font-size: 13px;")
             header.addWidget(title)
-            header.addWidget(QLabel(" | Comprehensive Server Management Tool"))
             header.addStretch()
             main.addLayout(header)
 
@@ -1994,7 +1993,7 @@ def run_gui_mode():
             qss = f"""
                 QMainWindow, QWidget {{ background: {bg}; }}
                 #footerBar, #cmdBar {{ background: {footer_bg}; }}
-                QCheckBox {{ color: {fg}; padding: 2px; }}
+                QCheckBox {{ color: {fg}; padding: 2px; background-color: transparent; }}
                 QCheckBox:hover {{ color: {fg}; }}
                 QCheckBox::indicator {{ background: {input_bg}; border: 1px solid {btn_border}; border-radius: 2px; width: 13px; height: 13px; }}
                 QCheckBox::indicator:hover {{ border: 1px solid {cb_hover}; background: {btn_hover_bg}; }}

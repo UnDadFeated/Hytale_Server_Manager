@@ -6,6 +6,10 @@
 
 ## Completed by Version
 
+### 3.10.5 (2025-03-22)
+
+- [x] Remove header subtitle; checkbox labels transparent bg (dark mode)
+
 ### 3.10.4 (2025-03-22)
 
 - [x] Light: checkbox checked = dark grey + white check (visible)
