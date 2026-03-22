@@ -6,6 +6,12 @@
 
 ## Completed by Version
 
+### 3.10.17 (2025-03-21)
+
+- [x] Status label: poll core state; fix "Stopped" when server running
+- [x] Status colors: Stopped red, Running green
+- [x] Start/Stop buttons: disabled state grey when inactive
+
 ### 3.10.16 (2025-03-21)
 
 - [x] Code cleanup: docstring, section comments, bare except fixes

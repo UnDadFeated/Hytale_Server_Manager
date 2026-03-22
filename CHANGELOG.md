@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.10.17 (2025-03-21)
+
+- **fix:** Status label: poll core state in _refresh_uptime (fixes "Stopped" when server running)
+- **fix:** Status colors: Stopped = red (#e53935), Running = green (#43a047)
+- **fix:** Start/Stop buttons: disabled state styled grey (#666) when inactive
+
 ## 3.10.16 (2025-03-21)
 
 - **chore:** Module docstring; section comments (Constants, Config, Core, CLI, GUI, Main)

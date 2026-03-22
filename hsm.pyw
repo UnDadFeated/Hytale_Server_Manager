@@ -60,7 +60,7 @@ if platform.system() == "Windows":
     # Also optionally use STARTUPINFO to hide things deeper if needed.
 else:
     CREATE_NO_WINDOW = 0
-__version__ = "3.10.16"
+__version__ = "3.10.17"
 JAVA_VERSION_REQ = 25
 SERVER_JAR = "HytaleServer.jar"
 UPDATER_ZIP_URL = "https://downloader.hytale.com/hytale-downloader.zip"
@@ -1707,7 +1707,7 @@ def run_gui_mode():
             nav_col.addSpacing(4)
             self.lbl_status = QLabel("Status: Stopped")
             self.lbl_status.setObjectName("statusLbl")
-            self.lbl_status.setStyleSheet("font-weight: bold;")
+            self.lbl_status.setStyleSheet("font-weight: bold; color: #e53935;")
             nav_col.addWidget(self.lbl_status)
             controls_layout.addLayout(nav_col)
 
@@ -1901,10 +1901,27 @@ def run_gui_mode():
                     QMessageBox.critical(self, "Error", f"Failed to set registry key: {e}")
 
         def _refresh_uptime(self):
-            """Refresh uptime label from core (called every second)."""
+            """Refresh uptime and status labels from core (called every second)."""
+            running = (
+                self.core.server_process is not None
+                and self.core.server_process.poll() is None
+            )
+            # Update status label with correct text and color
+            if running:
+                self.lbl_status.setText("Status: Running")
+                self.lbl_status.setStyleSheet("font-weight: bold; color: #43a047;")
+                self.btn_start.setEnabled(False)
+                self.btn_stop.setEnabled(True)
+            else:
+                self.lbl_status.setText("Status: Stopped")
+                self.lbl_status.setStyleSheet("font-weight: bold; color: #e53935;")
+                self.btn_start.setEnabled(True)
+                self.btn_stop.setEnabled(False)
+            # Update uptime
             s = self.core.get_uptime_str()
-            if self.lbl_uptime.text() != f"Uptime: {s}":
-                self.lbl_uptime.setText(f"Uptime: {s}")
+            uptime_text = f"Uptime: {s}"
+            if self.lbl_uptime.text() != uptime_text:
+                self.lbl_uptime.setText(uptime_text)
 
         def update_stats(self, status):
             def apply():
@@ -1924,11 +1941,13 @@ def run_gui_mode():
                     self.btn_start.setEnabled(True)
                     self.btn_stop.setEnabled(False)
                     self.lbl_status.setText("Status: Stopped")
+                    self.lbl_status.setStyleSheet("font-weight: bold; color: #e53935;")
                     self.lbl_uptime.setText("Uptime: 00:00:00")
                 elif state == "Running":
                     self.btn_start.setEnabled(False)
                     self.btn_stop.setEnabled(True)
                     self.lbl_status.setText("Status: Running")
+                    self.lbl_status.setStyleSheet("font-weight: bold; color: #43a047;")
                     self.lbl_uptime.setText(f"Uptime: {status.get('uptime', '00:00:00')}")
             QTimer.singleShot(0, apply)
 
@@ -2049,12 +2068,15 @@ def run_gui_mode():
                 #btnStart {{ font-weight: bold; color: #3fb950; }}
                 #btnStart:hover {{ border: 2px solid #3fb950; background: #1a3d1a; }}
                 #btnStart:pressed {{ border: 2px solid #3fb950; background: #3fb950; color: #0b0b0b; }}
+                #btnStart:disabled {{ color: #666; }}
                 #btnStop {{ font-weight: bold; color: #D13438; }}
                 #btnStop:hover {{ border: 2px solid #ff6b6b; background: #4d1a1a; }}
                 #btnStop:pressed {{ border: 2px solid #ff6b6b; background: #D13438; color: white; }}
+                #btnStop:disabled {{ color: #666; }}
             """
             self.setStyleSheet(qss)
             self.console.setStyleSheet(f"QPlainTextEdit {{ background: {console_bg}; color: {console_fg}; font-family: Consolas; font-size: 11px; }}")
+            self._refresh_uptime()  # Re-apply status color after theme change
 
         def toggle_theme(self):
             self.is_dark = not self.is_dark

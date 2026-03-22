@@ -1,5 +1,13 @@
 # Conversation Log
 
+## 2025-03-21 (status fix)
+
+- **Status label fix:** _refresh_uptime now polls core.server_process directly; status no longer stuck on Stopped
+- **Status colors:** Stopped = red (#e53935), Running = green (#43a047)
+- **Version:** 3.10.16 → 3.10.17 (PATCH)
+
+---
+
 ## 2025-03-21 (continued)
 
 - **Code cleanup:** Module docstring; section comments; bare `except:` → `except OSError`/`Exception`
