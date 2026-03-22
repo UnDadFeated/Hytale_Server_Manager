@@ -6,6 +6,10 @@
 
 ## Completed by Version
 
+### 3.10.21 (2025-03-21)
+
+- [x] Control config box: footer grey bg; buttons = discord input grey; CPU/RAM transparent
+
 ### 3.10.20 (2025-03-21)
 
 - [x] Config: "Do not update if modded" checkbox; mutually exclusive with "Check for updates"
