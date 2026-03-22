@@ -6,6 +6,10 @@
 
 ## Completed by Version
 
+### 3.10.7 (2025-03-22)
+
+- [x] Remove label/status boxes; footer taller
+
 ### 3.10.6 (2025-03-22)
 
 - [x] Footer skinnier; remove mod box; Status skinnier; fix uptime

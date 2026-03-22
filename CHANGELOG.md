@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.10.7 (2025-03-22)
+
+- **fix:** Remove boxes around QLabel (input labels, status); footer taller (40px) + margins
+
 ## 3.10.6 (2025-03-22)
 
 - **fix:** Footer skinnier (max-height 32px, reduced margins)

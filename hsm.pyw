@@ -54,7 +54,7 @@ if platform.system() == "Windows":
     # Also optionally use STARTUPINFO to hide things deeper if needed.
 else:
     CREATE_NO_WINDOW = 0
-__version__ = "3.10.6"
+__version__ = "3.10.7"
 
 
 
@@ -1534,7 +1534,7 @@ def run_gui_mode():
             cw = QWidget()
             self.setCentralWidget(cw)
             main = QVBoxLayout(cw)
-            main.setContentsMargins(6, 4, 6, 4)
+            main.setContentsMargins(6, 4, 6, 6)
             main.setSpacing(2)
 
             header = QHBoxLayout()
@@ -1684,6 +1684,7 @@ def run_gui_mode():
                 nav_col.addWidget(b)
             nav_col.addSpacing(4)
             self.lbl_status = QLabel("Status: Stopped")
+            self.lbl_status.setObjectName("statusLbl")
             self.lbl_status.setStyleSheet("font-weight: bold;")
             self.lbl_status.setMaximumHeight(18)
             nav_col.addWidget(self.lbl_status)
@@ -1742,10 +1743,10 @@ def run_gui_mode():
 
             footer_frame = QFrame()
             footer_frame.setObjectName("footerBar")
-            footer_frame.setMaximumHeight(32)
+            footer_frame.setMaximumHeight(40)
             footer = QHBoxLayout(footer_frame)
             footer.setSpacing(8)
-            footer.setContentsMargins(4, 2, 4, 2)
+            footer.setContentsMargins(6, 4, 6, 6)
             theme_btn = QPushButton("Toggle Theme")
             theme_btn.clicked.connect(self.toggle_theme)
             footer.addWidget(theme_btn)
@@ -2004,8 +2005,9 @@ def run_gui_mode():
                 QGroupBox {{ color: {fg}; font-weight: bold; padding-top: 6px; margin-top: 4px; {group_border} }}
                 QGroupBox::title {{ subcontrol-origin: margin; left: 8px; padding: 0 4px; color: {fg}; }}
                 QFrame {{ color: {fg}; {frame_border} padding: 4px; }}
-                QLabel {{ color: {fg}; }}
-                #mutedLbl {{ font-size: 10px; color: {muted}; margin: 0; padding: 0; border: none; background: transparent; }}
+                QLabel {{ color: {fg}; border: none; background: transparent; }}
+                #mutedLbl {{ font-size: 10px; color: {muted}; margin: 0; padding: 0; }}
+                #statusLbl {{ border: none; background: transparent; }}
                 QPushButton {{ {btn_border_style} padding: 4px 8px; color: {fg}; background: {btn_bg}; }}
                 QPushButton:hover {{ border: 2px solid {cb_hover}; background: {btn_hover_bg}; }}
                 QPushButton:pressed {{ border: 2px solid {cb_hover}; background: {cb_hover}; color: white; }}
