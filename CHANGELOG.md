@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.10.19 (2025-03-21)
+
+- **fix:** CPU/RAM: use psutil.cpu_percent(interval=0.1); update in _refresh_uptime (fixes 0% display)
+
 ## 3.10.18 (2025-03-21)
 
 - **fix:** Status label: color only "Running"/"Stopped", keep "Status:" in default theme color

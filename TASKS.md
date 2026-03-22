@@ -6,6 +6,10 @@
 
 ## Completed by Version
 
+### 3.10.19 (2025-03-21)
+
+- [x] CPU/RAM: psutil interval=0.1, update in _refresh_uptime (fix 0%)
+
 ### 3.10.18 (2025-03-21)
 
 - [x] Status label: color only Running/Stopped, not "Status:"

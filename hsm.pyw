@@ -60,7 +60,7 @@ if platform.system() == "Windows":
     # Also optionally use STARTUPINFO to hide things deeper if needed.
 else:
     CREATE_NO_WINDOW = 0
-__version__ = "3.10.18"
+__version__ = "3.10.19"
 JAVA_VERSION_REQ = 25
 SERVER_JAR = "HytaleServer.jar"
 UPDATER_ZIP_URL = "https://downloader.hytale.com/hytale-downloader.zip"
@@ -1902,7 +1902,7 @@ def run_gui_mode():
                     QMessageBox.critical(self, "Error", f"Failed to set registry key: {e}")
 
         def _refresh_uptime(self):
-            """Refresh uptime and status labels from core (called every second)."""
+            """Refresh uptime, status, and CPU/RAM labels (called every second)."""
             running = (
                 self.core.server_process is not None
                 and self.core.server_process.poll() is None
@@ -1921,19 +1921,24 @@ def run_gui_mode():
             uptime_text = f"Uptime: {s}"
             if self.lbl_uptime.text() != uptime_text:
                 self.lbl_uptime.setText(uptime_text)
+            # Update CPU/RAM (interval=0.1 required - cpu_percent returns 0 with interval=None)
+            if HAS_PSUTIL:
+                try:
+                    cpu_load = psutil.cpu_percent(interval=0.1)
+                    ram_load = psutil.virtual_memory().percent
+                    self.lbl_cpu.setText(f"CPU: {cpu_load}%")
+                    self.lbl_ram.setText(f"RAM: {ram_load}%")
+                except Exception:
+                    pass
+            else:
+                self.lbl_cpu.setText("CPU: N/A")
+                self.lbl_ram.setText("RAM: N/A")
 
         def update_stats(self, status):
+            """Callback from core; updates buttons/status. CPU/RAM handled by _refresh_uptime."""
             def apply():
                 state = status.get("state", "Unknown")
-                if HAS_PSUTIL:
-                    try:
-                        cpu_load = psutil.cpu_percent(interval=None)
-                        ram_load = psutil.virtual_memory().percent
-                        self.lbl_cpu.setText(f"CPU: {cpu_load}%")
-                        self.lbl_ram.setText(f"RAM: {ram_load}%")
-                    except Exception:
-                        pass
-                else:
+                if not HAS_PSUTIL:
                     self.lbl_cpu.setText("CPU: N/A")
                     self.lbl_ram.setText("RAM: N/A")
                 if state == "Stopped":
