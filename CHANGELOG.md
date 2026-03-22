@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.10.8 (2025-03-22)
+
+- **fix:** Footer buttons: min-height 24px, padding 6px 10px (text no longer cut off)
+- **fix:** Config col1/col2: uniform spacing 6px between fields
+
 ## 3.10.7 (2025-03-22)
 
 - **fix:** Remove boxes around QLabel (input labels, status); footer taller (40px) + margins

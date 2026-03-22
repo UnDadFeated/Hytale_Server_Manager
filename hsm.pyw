@@ -54,7 +54,7 @@ if platform.system() == "Windows":
     # Also optionally use STARTUPINFO to hide things deeper if needed.
 else:
     CREATE_NO_WINDOW = 0
-__version__ = "3.10.7"
+__version__ = "3.10.8"
 
 
 
@@ -1550,7 +1550,7 @@ def run_gui_mode():
             controls_layout.setSpacing(16)
 
             col1 = QVBoxLayout()
-            col1.setSpacing(0)
+            col1.setSpacing(6)
             self.cb_logging = QCheckBox("Enable File Logging")
             self.cb_logging.setChecked(self.config.get("enable_logging", True))
             self.cb_logging.stateChanged.connect(self.save)
@@ -1591,7 +1591,7 @@ def run_gui_mode():
             controls_layout.addLayout(col1)
 
             col2 = QVBoxLayout()
-            col2.setSpacing(0)
+            col2.setSpacing(6)
             self.cb_check_upd = QCheckBox("Check for new server updates")
             self.cb_check_upd.setChecked(self.config.get("check_updates", True))
             self.cb_check_upd.stateChanged.connect(self.save)
@@ -1743,7 +1743,7 @@ def run_gui_mode():
 
             footer_frame = QFrame()
             footer_frame.setObjectName("footerBar")
-            footer_frame.setMaximumHeight(40)
+            footer_frame.setMaximumHeight(44)
             footer = QHBoxLayout(footer_frame)
             footer.setSpacing(8)
             footer.setContentsMargins(6, 4, 6, 6)
@@ -1996,6 +1996,7 @@ def run_gui_mode():
             qss = f"""
                 QMainWindow, QWidget {{ background: {bg}; }}
                 #footerBar, #cmdBar {{ background: {footer_bg}; }}
+                #footerBar QPushButton {{ min-height: 24px; padding: 6px 10px; }}
                 QCheckBox {{ color: {fg}; padding: 2px; background-color: transparent; }}
                 QCheckBox:hover {{ color: {fg}; }}
                 QCheckBox::indicator {{ background: {input_bg}; border: 1px solid {btn_border}; border-radius: 2px; width: 13px; height: 13px; }}

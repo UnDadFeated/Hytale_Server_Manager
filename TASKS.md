@@ -6,6 +6,10 @@
 
 ## Completed by Version
 
+### 3.10.8 (2025-03-22)
+
+- [x] Footer button text not cut off; config col spacing even
+
 ### 3.10.7 (2025-03-22)
 
 - [x] Remove label/status boxes; footer taller
