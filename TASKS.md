@@ -6,6 +6,11 @@
 
 ## Completed by Version
 
+### 3.10.3 (2025-03-22)
+
+- [x] Check for updates: run installer and restart
+- [x] Light theme: explicit QMainWindow/QWidget bg #d4d0c8
+
 ### 3.10.2 (2025-03-21)
 
 - [x] Dark theme: Cursor IDE palette from 7.png

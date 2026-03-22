@@ -54,7 +54,7 @@ if platform.system() == "Windows":
     # Also optionally use STARTUPINFO to hide things deeper if needed.
 else:
     CREATE_NO_WINDOW = 0
-__version__ = "3.10.2"
+__version__ = "3.10.3"
 
 
 
@@ -1776,6 +1776,14 @@ def run_gui_mode():
             self.core.log("Checking for manager and server updates...")
             if self.core.check_self_update():
                 self.core.log("Manager update found. Restarting...")
+                self.core.stop_server()
+
+                def do_install():
+                    while self.core.server_process and self.core.server_process.poll() is None:
+                        time.sleep(0.5)
+                    self.core.run_update_installer()
+
+                threading.Thread(target=do_install, daemon=True).start()
             else:
                 self.core.log("Up to date.")
 
@@ -1980,6 +1988,7 @@ def run_gui_mode():
             p.setColor(QPalette.ButtonText, QColor(fg))
             self.setPalette(p)
             qss = f"""
+                QMainWindow, QWidget {{ background: {bg}; }}
                 QCheckBox {{ color: {fg}; padding: 2px; }}
                 QCheckBox:hover {{ color: {cb_hover}; }}
                 QCheckBox::indicator {{ background: {input_bg}; border: 1px solid {btn_border}; border-radius: 2px; width: 13px; height: 13px; }}
