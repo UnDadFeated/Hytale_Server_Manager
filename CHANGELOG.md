@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.10.14 (2025-03-22)
+
+- **fix:** Footer: reduced padding; vertically center buttons/checkboxes (AlignVCenter)
+
 ## 3.10.13 (2025-03-22)
 
 - **fix:** Dark mode: input boxes 1 shade lighter (#222222) for better contrast with GUI bg

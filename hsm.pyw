@@ -54,7 +54,7 @@ if platform.system() == "Windows":
     # Also optionally use STARTUPINFO to hide things deeper if needed.
 else:
     CREATE_NO_WINDOW = 0
-__version__ = "3.10.13"
+__version__ = "3.10.14"
 
 
 
@@ -1745,7 +1745,8 @@ def run_gui_mode():
             footer_frame.setMaximumHeight(35)
             footer = QHBoxLayout(footer_frame)
             footer.setSpacing(6)
-            footer.setContentsMargins(4, 2, 4, 4)
+            footer.setContentsMargins(3, 0, 3, 2)
+            footer.setAlignment(Qt.AlignVCenter)
             theme_btn = QPushButton("Toggle Theme")
             theme_btn.setFixedHeight(24)
             theme_btn.clicked.connect(self.toggle_theme)
@@ -1998,8 +1999,7 @@ def run_gui_mode():
             qss = f"""
                 QMainWindow, QWidget {{ background: {bg}; }}
                 #footerBar, #cmdBar {{ background: {footer_bg}; }}
-                #footerBar QPushButton {{ font-size: 10px; padding: 2px 6px; min-height: 20px; margin-top: 1px; }}
-                #footerBar QCheckBox {{ margin-top: 1px; }}
+                #footerBar QPushButton {{ font-size: 10px; padding: 2px 6px; min-height: 20px; }}
                 QCheckBox {{ color: {fg}; padding: 2px; background-color: transparent; }}
                 QCheckBox:hover {{ color: {fg}; }}
                 QCheckBox::indicator {{ background: {input_bg}; border: 1px solid {btn_border}; border-radius: 2px; width: 13px; height: 13px; }}
