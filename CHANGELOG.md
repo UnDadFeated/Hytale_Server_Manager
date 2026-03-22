@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.9.6 (2025-03-21)
+
+- **feat:** Extended debug.log: server lifecycle (start/stop/crash/restart), backup, commands, schedule
+
 ## 3.9.5 (2025-03-21)
 
 - **feat:** Interactive buttons/checkboxes: hover color change, active button glow (PySide6 QSS)

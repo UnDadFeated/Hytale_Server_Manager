@@ -6,6 +6,10 @@
 
 ## Completed by Version
 
+### 3.9.6 (2025-03-21)
+
+- [x] Extended debug.log: server start/stop/crash, backup, send_command, schedule restart
+
 ### 3.9.5 (2025-03-21)
 
 - [x] Interactive buttons: hover color, active glow (PySide6 QSS)

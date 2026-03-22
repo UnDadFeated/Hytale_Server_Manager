@@ -53,7 +53,7 @@ if platform.system() == "Windows":
     # Also optionally use STARTUPINFO to hide things deeper if needed.
 else:
     CREATE_NO_WINDOW = 0
-__version__ = "3.9.5"
+__version__ = "3.9.6"
 
 
 
@@ -546,6 +546,7 @@ class HytaleUpdaterCore:
 
     def stop_existing_server_process(self):
         """Detects and stops any running instance of the Hytale server."""
+        _debug("SERVER", "stop_existing_server_process() checking for orphaned java/HytaleServer.jar")
         self.log("Checking for running Hytale server...")
         if IS_WINDOWS:
             try:
@@ -1014,6 +1015,7 @@ except Exception as e:
 
     def send_command(self, command):
         """Sends a console command to the running server process."""
+        _debug("CMD", f"send_command: {command[:50]}{'...' if len(command) > 50 else ''}")
         if self.server_process and self.server_process.poll() is None:
             try:
                 self.log(f"> {command}")
@@ -1027,11 +1029,13 @@ except Exception as e:
 
     def backup_world(self):
         """Creates a backup of the world directory."""
-        if not self.config.get("enable_backups", True): return
-        
+        if not self.config.get("enable_backups", True):
+            _debug("BACKUP", "skipped (disabled)")
+            return
         if not os.path.exists(WORLD_DIR):
-             self.log(f"Backup skipped: World directory not found at {WORLD_DIR}")
-             return
+            _debug("BACKUP", f"skipped: {WORLD_DIR} not found")
+            self.log(f"Backup skipped: World directory not found at {WORLD_DIR}")
+            return
 
         self.log(f"Creating world backup from {WORLD_DIR}...")
         if not os.path.exists(BACKUP_DIR): os.makedirs(BACKUP_DIR)
@@ -1041,6 +1045,7 @@ except Exception as e:
         
         try:
             shutil.make_archive(backup_name, 'zip', WORLD_DIR)
+            _debug("BACKUP", f"created {backup_name}.zip")
             self.log(f"Backup created: {backup_name}.zip")
             
             max_b = int(self.config.get("max_backups", 3))
@@ -1075,14 +1080,17 @@ except Exception as e:
         """Internal method to handle the server startup steps."""
         with self._lifecycle_lock:
             if self.server_process and self.server_process.poll() is None:
+                _debug("SERVER", "start_server_sequence skipped: already running")
                 self.log("Start requested but server is already running. Skipping.")
                 return
             if getattr(self, '_starting', False):
+                _debug("SERVER", "start_server_sequence skipped: startup in progress")
                 self.log("Startup already in progress. Skipping.")
                 return
             self._starting = True
             self.stop_requested = False
 
+        _debug("SERVER", "start_server_sequence begin")
         try:
             # 1. Manager Update Check
             if self.check_self_update():
@@ -1139,6 +1147,7 @@ except Exception as e:
                     startupinfo=startupinfo, creationflags=creationflags
                 )
                 self.start_time = datetime.datetime.now()
+                _debug("SERVER", f"Started | pid={self.server_process.pid} | cmd={' '.join(cmd[:4])}...")
                 self.update_status({"state": "Running", "pid": self.server_process.pid})
 
                 threading.Thread(target=self._read_stream, args=(self.server_process.stdout, "stdout"), daemon=True).start()
@@ -1153,6 +1162,7 @@ except Exception as e:
                     self._schedule_restart()
 
             except Exception as e:
+                _debug("SERVER", f"Failed to start: {e}")
                 self.log(f"Failed to start server: {e}")
                 self.update_status({"state": "Stopped"})
         finally:
@@ -1187,16 +1197,21 @@ except Exception as e:
             time.sleep(1)
 
         rc = self.server_process.returncode
+        pid = getattr(self.server_process, "pid", "?")
         self.log(f"Server exited with code {rc}")
+        _debug("SERVER", f"Process exited | pid={pid} | returncode={rc} | stop_requested={self.stop_requested}")
         self.server_process = None
         self.update_status({"state": "Stopped"})
         self.send_discord_webhook(f"🔴 Server Stopped (Code {rc})")
 
         if rc != 0 and not self.stop_requested and self.config.get("enable_auto_restart", True):
+             _debug("SERVER", "Crash detected (rc!=0) | auto_restart enabled | scheduling restart in 10s")
              self.log("Crash detected! Restarting in 10 seconds...")
              self.send_discord_webhook("⚠️ Crash detected. Restarting in 10s...")
              time.sleep(10)
              self.start_server_sequence()
+        elif rc != 0:
+             _debug("SERVER", f"Crash detected (rc={rc}) | auto_restart disabled or stop_requested")
 
     def start_update_checker(self):
         """Starts the background update checker."""
@@ -1260,6 +1275,7 @@ except Exception as e:
 
     def restart_server(self):
         """Restarts the server cleanly."""
+        _debug("SERVER", "restart_server() called")
         self.log("Restarting server...")
         self.stop_server()
         
@@ -1271,6 +1287,7 @@ except Exception as e:
 
     def stop_server(self):
         """Stops the running server process."""
+        _debug("SERVER", "stop_server() called")
         self.stop_requested = True
         if self.restart_timer:
             self.restart_timer.cancel()
@@ -1287,6 +1304,7 @@ except Exception as e:
             try:
                 self.server_process.wait(timeout=30)
             except subprocess.TimeoutExpired:
+                _debug("SERVER", "stop timeout (30s) - killing process")
                 self.log("Server did not stop in time. Killing process...")
                 self.server_process.kill()
                 self.server_process.wait()
@@ -1294,6 +1312,7 @@ except Exception as e:
     def _schedule_restart(self):
         """Schedules an automatic restart after a configured interval."""
         hours = float(self.config.get("restart_interval", 12))
+        _debug("SERVER", f"scheduled restart in {hours}h")
         seconds = hours * 3600
         self.log(f"Scheduled restart in {hours} hours.")
         
@@ -1882,10 +1901,14 @@ def run_gui_mode():
             p.setColor(QPalette.Button, QColor("#2d2d2d" if self.is_dark else "#e0e0e0"))
             p.setColor(QPalette.ButtonText, QColor(fg))
             self.setPalette(p)
+            input_bg = "#c8c8c8"
             qss = f"""
                 QCheckBox {{ color: {fg}; padding: 2px; }}
-                QCheckBox:hover {{ color: {cb_hover}; }}
-                QCheckBox:checked {{ font-weight: bold; }}
+                QCheckBox::indicator {{ width: 16px; height: 16px; background: {input_bg}; border: 1px solid {btn_border}; border-radius: 2px; }}
+                QCheckBox::indicator:hover {{ border: 2px solid {cb_hover}; }}
+                QCheckBox::indicator:checked {{ background: #707070; border: 1px solid {btn_border}; color: white; }}
+                QCheckBox::indicator:checked:hover {{ border: 2px solid {cb_hover}; }}
+                QLineEdit {{ background: {input_bg}; color: #1a1a1a; padding: 2px; border: 1px solid {btn_border}; }}
                 QPushButton {{ border: 1px solid {btn_border}; border-radius: 4px; padding: 4px 8px; }}
                 QPushButton:hover {{ border: 2px solid {cb_hover}; background: {btn_hover_bg}; }}
                 QPushButton:pressed {{ border: 2px solid {cb_hover}; background: {cb_hover}; color: white; }}
