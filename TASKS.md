@@ -6,6 +6,10 @@
 
 ## Completed by Version
 
+### 3.10.2 (2025-03-21)
+
+- [x] Dark theme: Cursor IDE palette from 7.png
+
 ### 3.10.1 (2025-03-21)
 
 - [x] Light theme: GUI bg #d4d0c8 (match retro grey button)

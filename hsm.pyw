@@ -54,7 +54,7 @@ if platform.system() == "Windows":
     # Also optionally use STARTUPINFO to hide things deeper if needed.
 else:
     CREATE_NO_WINDOW = 0
-__version__ = "3.10.1"
+__version__ = "3.10.2"
 
 
 
@@ -1947,16 +1947,16 @@ def run_gui_mode():
             check_w = icon_url(CHECK_WHITE_PNG)
             check_b = icon_url(CHECK_BLACK_PNG)
             if self.is_dark:
-                # Cursor-IDE / VS Code Dark+ theme; console black; 1px silver borders
-                bg, fg = "#1e1e1e", "#d4d4d4"
-                input_bg, input_fg = "#252526", "#d4d4d4"
+                # Cursor-IDE palette (7.png): charcoal layers, 1px silver borders
+                bg, fg = "#0b0b0b", "#e0e0e0"
+                input_bg, input_fg = "#1e1e1e", "#e0e0e0"
                 console_bg, console_fg = "#0c0c0c", "#d4d4d4"
-                muted, cb_hover = "#bbbbbb", "#569cd6"
-                btn_hover_bg, btn_border = "#2d2d30", silver
+                muted, cb_hover = "#9d9d9d", "#3fb950"
+                btn_hover_bg, btn_border = "#202020", "#333333"
                 cb_checked = f"background: {cb_hover}; border-color: {cb_hover}; image: url({check_w!r});"
                 input_border = f"border: 1px solid {btn_border};"
-                group_border = f"border: 1px solid {btn_border}; border-radius: 4px;"
-                frame_border = f"border: 1px solid {btn_border}; border-radius: 4px;"
+                group_border = f"border: 1px solid {btn_border}; border-radius: 4px; background: {input_bg};"
+                frame_border = f"border: 1px solid {btn_border}; border-radius: 4px; background: {input_bg};"
                 btn_border_style = f"border: 1px solid {btn_border}; border-radius: 4px;"
             else:
                 # Light: 90s retro Windows (match grey button face #d4d0c8); console stays black
@@ -1995,9 +1995,9 @@ def run_gui_mode():
                 QPushButton:hover {{ border: 2px solid {cb_hover}; background: {btn_hover_bg}; }}
                 QPushButton:pressed {{ border: 2px solid {cb_hover}; background: {cb_hover}; color: white; }}
                 QPushButton:disabled {{ opacity: 0.5; }}
-                #btnStart {{ font-weight: bold; color: #107C10; }}
-                #btnStart:hover {{ border: 2px solid #2ed12e; background: #1a4d1a; }}
-                #btnStart:pressed {{ border: 2px solid #2ed12e; background: #107C10; color: white; }}
+                #btnStart {{ font-weight: bold; color: #3fb950; }}
+                #btnStart:hover {{ border: 2px solid #3fb950; background: #1a3d1a; }}
+                #btnStart:pressed {{ border: 2px solid #3fb950; background: #3fb950; color: #0b0b0b; }}
                 #btnStop {{ font-weight: bold; color: #D13438; }}
                 #btnStop:hover {{ border: 2px solid #ff6b6b; background: #4d1a1a; }}
                 #btnStop:pressed {{ border: 2px solid #ff6b6b; background: #D13438; color: white; }}

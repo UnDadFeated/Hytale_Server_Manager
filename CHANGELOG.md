@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.10.2 (2025-03-21)
+
+- **fix:** Dark theme: Cursor IDE palette (#0b0b0b bg, #1e1e1e sections, #333333 borders, #3fb950 accent)
+
 ## 3.10.1 (2025-03-21)
 
 - **fix:** Light theme GUI background now uses Windows retro grey (#d4d0c8)
