@@ -6,6 +6,10 @@
 
 ## Completed by Version
 
+### 3.10.10 (2025-03-22)
+
+- [x] Footer: buttons and checkbox text centered (margin-top -2px)
+
 ### 3.10.9 (2025-03-22)
 
 - [x] Footer: skinny, smaller buttons (24px), 10px font, no cut-off

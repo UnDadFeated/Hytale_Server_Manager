@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.10.10 (2025-03-22)
+
+- **fix:** Footer: buttons and checkbox labels nudged up 2px for vertical centering
+
 ## 3.10.9 (2025-03-22)
 
 - **fix:** Footer: skinny (34px), buttons 24px height, font 10px, padding 2px 6px (no text cut-off)

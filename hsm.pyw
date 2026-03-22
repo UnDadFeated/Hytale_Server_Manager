@@ -54,7 +54,7 @@ if platform.system() == "Windows":
     # Also optionally use STARTUPINFO to hide things deeper if needed.
 else:
     CREATE_NO_WINDOW = 0
-__version__ = "3.10.9"
+__version__ = "3.10.10"
 
 
 
@@ -1999,7 +1999,8 @@ def run_gui_mode():
             qss = f"""
                 QMainWindow, QWidget {{ background: {bg}; }}
                 #footerBar, #cmdBar {{ background: {footer_bg}; }}
-                #footerBar QPushButton {{ font-size: 10px; padding: 2px 6px; min-height: 20px; }}
+                #footerBar QPushButton {{ font-size: 10px; padding: 2px 6px; min-height: 20px; margin-top: -2px; }}
+                #footerBar QCheckBox {{ margin-top: -2px; }}
                 QCheckBox {{ color: {fg}; padding: 2px; background-color: transparent; }}
                 QCheckBox:hover {{ color: {fg}; }}
                 QCheckBox::indicator {{ background: {input_bg}; border: 1px solid {btn_border}; border-radius: 2px; width: 13px; height: 13px; }}
