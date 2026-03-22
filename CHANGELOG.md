@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.10.12 (2025-03-22)
+
+- **fix:** Footer 1px taller (35px); buttons/checkboxes margin-top 1px (fix top-line clipping)
+
 ## 3.10.11 (2025-03-22)
 
 - **fix:** Status label: remove max-height, add padding (fix descender cut-off on "Stopped")

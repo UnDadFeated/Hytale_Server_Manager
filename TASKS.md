@@ -6,6 +6,10 @@
 
 ## Completed by Version
 
+### 3.10.12 (2025-03-22)
+
+- [x] Footer 1px taller; buttons moved down 1px (fix top clipping)
+
 ### 3.10.11 (2025-03-22)
 
 - [x] Status label: fix "Stopped" descenders cut off
