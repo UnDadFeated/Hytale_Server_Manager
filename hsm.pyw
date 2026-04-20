@@ -60,7 +60,7 @@ if platform.system() == "Windows":
     # Also optionally use STARTUPINFO to hide things deeper if needed.
 else:
     CREATE_NO_WINDOW = 0
-__version__ = "3.11.1"
+__version__ = "3.11.3"
 JAVA_VERSION_REQ = 25
 SERVER_JAR = "HytaleServer.jar"
 UPDATER_ZIP_URL = "https://downloader.hytale.com/hytale-downloader.zip"
@@ -142,9 +142,17 @@ def _show_missing_deps_and_offer_install(missing):
     Works with pythonw (no console). Returns True if user chose Install and it succeeded (or deps now OK).
     """
     pkg_list = ", ".join(missing)
+    if IS_WINDOWS:
+        install_hint = "Install manually (PowerShell):\n  py -m pip install " + " ".join(missing) + "\n  py -m pip install -r requirements.txt"
+    elif IS_DARWIN:
+        install_hint = "Install manually (Terminal):\n  python3 -m pip install " + " ".join(missing) + "\n  python3 -m pip install -r requirements.txt"
+    else:
+        install_hint = "Install manually (Terminal):\n  python3 -m pip install " + " ".join(missing) + "\n  python3 -m pip install -r requirements.txt"
+
     msg = (
         f"Hytale Server Manager cannot start the GUI.\n\n"
         f"Missing: {pkg_list}\n\n"
+        f"{install_hint}\n\n"
         f"Would you like to install them now?"
     )
     def do_install():
@@ -445,10 +453,10 @@ class HytaleUpdaterCore:
                 startupinfo.wShowWindow = subprocess.SW_HIDE
                 kwargs["startupinfo"] = startupinfo
                 kwargs["creationflags"] = CREATE_NO_WINDOW
-                
+
             result = subprocess.run(["java", "-version"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, **kwargs)
             output = result.stdout
-            
+
             match = re.search(r'version "(?:1\.)?(\d+)', output)
             if match:
                 major_version = int(match.group(1))
@@ -456,19 +464,94 @@ class HytaleUpdaterCore:
                     self.log(f"Java {major_version} detected.")
                     return True
                 else:
-                    self.log(f"WARNING: Java {major_version} detected, but Java {JAVA_VERSION_REQ} or higher is required. Output:\n{output}")
+                    self.log(f"WARNING: Java {major_version} detected, but Java {JAVA_VERSION_REQ}+ is required.")
+                    self._show_java_error()
                     return False
             else:
                 # Fallback string matching
-                if f'version "{JAVA_VERSION_REQ}' in output or f'version "1.{JAVA_VERSION_REQ}' in output:
+                if f'version "{JAVA_VERSION_REQ}"' in output or f'version "1.{JAVA_VERSION_REQ}"' in output:
                     self.log(f"Java {JAVA_VERSION_REQ} detected.")
                     return True
-                
-                self.log(f"WARNING: Java {JAVA_VERSION_REQ} or higher not detected. Output:\n{output}")
+
+                self.log(f"WARNING: Java {JAVA_VERSION_REQ}+ not detected.")
+                self._show_java_error()
                 return False
         except FileNotFoundError:
             self.log("ERROR: Java not found in PATH.")
+            self._show_java_error()
             return False
+
+    def _show_java_error(self):
+        """Show platform-specific dialog with Java install instructions."""
+        if IS_WINDOWS:
+            self._show_java_error_windows()
+        elif IS_DARWIN:
+            self._show_java_error_macos()
+        elif IS_LINUX:
+            self._show_java_error_linux()
+
+    def _show_java_error_windows(self):
+        """Windows error dialog."""
+        msg = (
+            "Hytale Server Manager requires Java 25+\n\n"
+            "Download from: https://adoptium.net/temurin/releases/?version=25\n\n"
+            "Install, then restart this application."
+        )
+        try:
+            import ctypes
+            ctypes.windll.user32.MessageBoxW(0, msg, "Java Required", 0x10)
+        except Exception:
+            pass
+
+    def _show_java_error_macos(self):
+        """macOS error dialog."""
+        msg = (
+            "Hytale Server Manager requires Java 25+\n\n"
+            "Install via Homebrew:\n"
+            "  brew install openjdk@25\n\n"
+            "Or download from:\n"
+            "  https://adoptium.net"
+        )
+        try:
+            subprocess.run([
+                "osascript", "-e",
+                f'display dialog "{msg}" with title "Java Required" buttons {{"OK"}}'
+            ], capture_output=True)
+        except Exception:
+            pass
+
+    def _show_java_error_linux(self):
+        """Linux error dialog with package manager detection."""
+        cmds = []
+        if os.path.exists("/usr/bin/apt"):
+            cmds.append("sudo apt install openjdk-25-jdk")
+        if os.path.exists("/usr/bin/dnf"):
+            cmds.append("sudo dnf install java-25-openjdk-devel")
+        if os.path.exists("/usr/bin/pacman"):
+            cmds.append("yay -S jdk25-openjdk")
+        if os.path.exists("/usr/bin/zypper"):
+            cmds.append("sudo zypper install openjdk-25-devel")
+
+        msg = "Hytale Server Manager requires Java 25+\n\n"
+        if cmds:
+            msg += "Install with:\n  " + "\n  ".join(cmds) + "\n\n"
+        msg += "Or download from: https://adoptium.net"
+
+        for tool in ["kdialog", "zenity"]:
+            try:
+                subprocess.run([tool, "--error", "--text=" + msg[:500]], capture_output=True)
+                return
+            except FileNotFoundError:
+                continue
+
+        # Fallback: write help file
+        try:
+            help_file = os.path.join(BASE_DIR, "JAVA_REQUIREMENTS.txt")
+            with open(help_file, "w") as f:
+                f.write(msg)
+            subprocess.run(["xdg-open", help_file], capture_output=True)
+        except Exception:
+            pass
 
     def check_assets(self):
         """Checks if the required assets file exists, asking the user if missing."""
@@ -510,11 +593,12 @@ class HytaleUpdaterCore:
             
         for cand in candidates:
             if os.path.exists(cand):
-                 if not IS_WINDOWS and not os.access(cand, os.X_OK):
-                     try: os.chmod(cand, 0o755)
-                     except OSError:
-                         pass
-                 return [f"./{cand}"] if not IS_WINDOWS else [cand]
+                if not IS_WINDOWS and not os.access(cand, os.X_OK):
+                    try:
+                        os.chmod(cand, 0o755)
+                    except OSError:
+                        pass
+                return [f"./{cand}"] if not IS_WINDOWS else [cand]
 
         if os.path.exists("hytale-downloader.jar"):
             return ["java", "-jar", "hytale-downloader.jar"]
@@ -634,7 +718,7 @@ class HytaleUpdaterCore:
     def _updater_channel_args(self):
         """Returns downloader args for pre-release channel when enabled."""
         if self.config.get("update_to_prerelease", False):
-            return ["-channel", "prerelease"]
+            return ["-patchline", "pre-release"]
         return []
 
     def get_remote_server_version(self, updater_cmd):
@@ -1158,7 +1242,8 @@ except Exception as e:
                 return
 
             # 2. Java Check
-            if not self.check_java_version(): return
+            if not self.check_java_version():
+                return
 
             # 3. Server Check (and Downloader)
             if self.config.get("check_updates", True):
@@ -2261,7 +2346,7 @@ def print_help():
     print("  - enable_logging      : Write logs to hsm.log. [true/false]")
     print("  - check_updates       : Check for updates on startup. [true/false]")
     print("  - auto_start          : Automatically start the server when this script runs. [true/false]")
-    print("  - update_to_prerelease: Track pre-release server channel. [true/false]")
+    print("  - update_to_prerelease: Track pre-release patchline. [true/false]")
     print("  - enable_backups      : Zip the world folder before starting. [true/false]")
     print("  - max_backups         : Number of backups to keep. [Integer]")
     print("  - enable_discord      : Enable Discord Webhook notifications. [true/false]")
