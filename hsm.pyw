@@ -60,7 +60,7 @@ if platform.system() == "Windows":
     # Also optionally use STARTUPINFO to hide things deeper if needed.
 else:
     CREATE_NO_WINDOW = 0
-__version__ = "3.11.0"
+__version__ = "3.11.1"
 JAVA_VERSION_REQ = 25
 SERVER_JAR = "HytaleServer.jar"
 UPDATER_ZIP_URL = "https://downloader.hytale.com/hytale-downloader.zip"
@@ -274,6 +274,9 @@ def validate_config(config):
         config["restart_interval"] = 12.0
 
     config["update_to_prerelease"] = bool(config.get("update_to_prerelease", False))
+    if "auto_start_system" not in config:
+        config["auto_start_system"] = bool(config.get("start_with_windows", False))
+    config["auto_start_system"] = bool(config.get("auto_start_system", False))
 
     return config
 
@@ -297,6 +300,7 @@ def load_config():
         "server_memory": "8G",
         "max_backups": 3,
         "manager_auto_update": True,
+        "auto_start_system": False,
         "start_with_windows": False
     }
     if os.path.exists(CONFIG_FILE):
@@ -1817,17 +1821,16 @@ def run_gui_mode():
             self.cb_mgr_update.setChecked(self.config.get("manager_auto_update", True))
             self.cb_mgr_update.stateChanged.connect(self.save)
             footer.addWidget(self.cb_mgr_update)
-            self.cb_start_win = QCheckBox("Start with Windows")
-            self.cb_start_win.setChecked(self.config.get("start_with_windows", False))
-            self.cb_start_win.stateChanged.connect(self.save_and_set_autostart)
-            if not IS_WINDOWS:
-                self.cb_start_win.setEnabled(False)
-            footer.addWidget(self.cb_start_win)
-            if IS_LINUX:
-                btn_install_service = QPushButton("Install Service")
-                btn_install_service.setFixedHeight(24)
-                btn_install_service.clicked.connect(self.install_service_ui)
-                footer.addWidget(btn_install_service)
+            if IS_WINDOWS:
+                autostart_label = "Start with Windows"
+            elif IS_LINUX:
+                autostart_label = "Auto-Start with System"
+            else:
+                autostart_label = "Auto-Start at Login"
+            self.cb_autostart_system = QCheckBox(autostart_label)
+            self.cb_autostart_system.setChecked(self.config.get("auto_start_system", False))
+            self.cb_autostart_system.stateChanged.connect(self.save_and_set_autostart)
+            footer.addWidget(self.cb_autostart_system)
             footer.addStretch()
             footer.addWidget(btn_check)
             btn_coffee = QPushButton("☕ Support the Development")
@@ -1943,33 +1946,79 @@ def run_gui_mode():
                 "server_aot": self.entry_aot.text(),
                 "max_backups": int(mb) if mb.isdigit() else 3,
                 "manager_auto_update": self.cb_mgr_update.isChecked(),
-                "start_with_windows": self.cb_start_win.isChecked(),
+                "auto_start_system": self.cb_autostart_system.isChecked(),
+                "start_with_windows": self.cb_autostart_system.isChecked() if IS_WINDOWS else self.config.get("start_with_windows", False),
             })
             self.core.config = self.config
             save_config(self.config)
 
         def save_and_set_autostart(self):
             self.save()
+            enabled = self.cb_autostart_system.isChecked()
             if IS_WINDOWS:
+                self._set_windows_autostart(enabled)
+            elif IS_LINUX:
+                self._set_linux_autostart(enabled)
+            elif IS_DARWIN:
+                self._set_macos_autostart(enabled)
+
+        def _set_windows_autostart(self, enabled):
+            try:
+                import winreg
+                key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Run", 0, winreg.KEY_SET_VALUE)
+                if enabled:
+                    script_path = os.path.abspath(sys.argv[0])
+                    python_exe = sys.executable
+                    if "pythonw.exe" not in python_exe.lower():
+                        pw = os.path.join(os.path.dirname(python_exe), "pythonw.exe")
+                        python_exe = pw if os.path.exists(pw) else pw
+                    cmd = f'"{python_exe}" "{script_path}" --startup-delay'
+                    winreg.SetValueEx(key, "HytaleServerManager", 0, winreg.REG_SZ, cmd)
+                else:
+                    try:
+                        winreg.DeleteValue(key, "HytaleServerManager")
+                    except OSError:
+                        pass
+                winreg.CloseKey(key)
+            except Exception as e:
+                QMessageBox.critical(self, "Error", f"Failed to set registry key: {e}")
+
+        def _set_linux_autostart(self, enabled):
+            desktop_file = os.path.expanduser("~/.config/autostart/hytale-manager.desktop")
+            if enabled:
+                enable_autostart()
+            else:
                 try:
-                    import winreg
-                    key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Run", 0, winreg.KEY_SET_VALUE)
-                    if self.cb_start_win.isChecked():
-                        script_path = os.path.abspath(sys.argv[0])
-                        python_exe = sys.executable
-                        if "pythonw.exe" not in python_exe.lower():
-                            pw = os.path.join(os.path.dirname(python_exe), "pythonw.exe")
-                            python_exe = pw if os.path.exists(pw) else pw
-                        cmd = f'"{python_exe}" "{script_path}" --startup-delay'
-                        winreg.SetValueEx(key, "HytaleServerManager", 0, winreg.REG_SZ, cmd)
-                    else:
-                        try:
-                            winreg.DeleteValue(key, "HytaleServerManager")
-                        except OSError:
-                            pass
-                    winreg.CloseKey(key)
+                    if os.path.exists(desktop_file):
+                        os.remove(desktop_file)
                 except Exception as e:
-                    QMessageBox.critical(self, "Error", f"Failed to set registry key: {e}")
+                    QMessageBox.critical(self, "Error", f"Failed to disable Linux auto-start: {e}")
+
+        def _set_macos_autostart(self, enabled):
+            app_name = "Hytale Server Manager"
+            script_path = os.path.abspath(sys.argv[0])
+            python_exe = sys.executable
+            cmd = f'"{python_exe}" "{script_path}"'
+            if enabled:
+                script = (
+                    'tell application "System Events"\n'
+                    'if not (exists login item "' + app_name + '") then\n'
+                    'make login item at end with properties {name:"' + app_name + '", path:"' + cmd.replace('"', '\\"') + '", hidden:false}\n'
+                    'end if\n'
+                    'end tell'
+                )
+            else:
+                script = (
+                    'tell application "System Events"\n'
+                    'if exists login item "' + app_name + '" then\n'
+                    'delete login item "' + app_name + '"\n'
+                    'end if\n'
+                    'end tell'
+                )
+            try:
+                subprocess.run(["osascript", "-e", script], capture_output=True, text=True)
+            except Exception as e:
+                QMessageBox.critical(self, "Error", f"Failed to update macOS login item: {e}")
 
         def _refresh_uptime(self):
             """Refresh uptime, status, and CPU/RAM labels (called every second)."""

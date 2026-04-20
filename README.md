@@ -6,7 +6,7 @@
   </p>
 
   <p>
-    <img alt="Version" src="https://img.shields.io/badge/version-3.11.0-blue.svg" />
+    <img alt="Version" src="https://img.shields.io/badge/version-3.11.1-blue.svg" />
     <img alt="Python" src="https://img.shields.io/badge/python-3.8%2B-blue.svg" />
     <img alt="Platform" src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey.svg" />
   </p>
@@ -14,7 +14,7 @@
 
 ![Hytale Server Manager Screenshot](screenshot.png)
 
-*Screenshot: Hytale Server Manager v3.11.0 — Controls, live metrics (CPU/RAM/uptime), and console output.*
+*Screenshot: Hytale Server Manager v3.11.1 — Controls, live metrics (CPU/RAM/uptime), and console output.*
 
 ---
 
@@ -143,6 +143,6 @@ Changes made to the server logic are primarily driven by the `hsm.conf` JSON fla
 
 ## 🏷️ Versioning
 
-**Current Version:** `3.11.0`
+**Current Version:** `3.11.1`
 
 See [CHANGELOG.md](CHANGELOG.md) for full version history.
