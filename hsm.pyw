@@ -60,7 +60,7 @@ if platform.system() == "Windows":
     # Also optionally use STARTUPINFO to hide things deeper if needed.
 else:
     CREATE_NO_WINDOW = 0
-__version__ = "3.10.22"
+__version__ = "3.11.0"
 JAVA_VERSION_REQ = 25
 SERVER_JAR = "HytaleServer.jar"
 UPDATER_ZIP_URL = "https://downloader.hytale.com/hytale-downloader.zip"
@@ -273,6 +273,8 @@ def validate_config(config):
         print("WARNING: Invalid restart_interval. Reverting to 12.0.")
         config["restart_interval"] = 12.0
 
+    config["update_to_prerelease"] = bool(config.get("update_to_prerelease", False))
+
     return config
 
 def load_config():
@@ -282,6 +284,7 @@ def load_config():
         "dark_mode": True,
         "enable_logging": True,
         "check_updates": True,
+        "update_to_prerelease": False,
         "auto_start": False,
         "enable_backups": True,
         "enable_discord": False,
@@ -624,11 +627,17 @@ class HytaleUpdaterCore:
                         subprocess.run(["kill", pid])
              except Exception: pass
 
+    def _updater_channel_args(self):
+        """Returns downloader args for pre-release channel when enabled."""
+        if self.config.get("update_to_prerelease", False):
+            return ["-channel", "prerelease"]
+        return []
+
     def get_remote_server_version(self, updater_cmd):
         """Queries the updater for the latest remote server version."""
         try:
-            cmd = updater_cmd + ["-print-version"]
-            
+            cmd = updater_cmd + ["-print-version"] + self._updater_channel_args()
+
             CREDENTIALS_FILE = ".hytale-downloader-credentials.json"
             exe_dir = os.path.dirname(os.path.abspath(updater_cmd[0]))
             cred_path = os.path.join(exe_dir, CREDENTIALS_FILE)
@@ -972,6 +981,7 @@ except Exception as e:
                 cred_path = os.path.join(exe_dir, CREDENTIALS_FILE)
                 
                 run_cmd = resolved_cmd.copy()
+                run_cmd.extend(self._updater_channel_args())
                 run_cmd.extend(["-credentials-path", cred_path])
 
                 # Ensure the executable directory is writable on Linux
@@ -1566,127 +1576,11 @@ def run_gui_mode():
             header.addStretch()
             main.addLayout(header)
 
-            controls = QGroupBox("Controls & Configuration")
-            controls.setObjectName("controlsGroup")
-            controls_layout = QHBoxLayout(controls)
-            controls_layout.setContentsMargins(6, 10, 6, 6)
-            controls_layout.setSpacing(16)
-
-            col1 = QVBoxLayout()
-            col1.setSpacing(6)
-            self.cb_logging = QCheckBox("Enable File Logging")
-            self.cb_logging.setChecked(self.config.get("enable_logging", True))
-            self.cb_logging.stateChanged.connect(self.save)
-            col1.addWidget(self.cb_logging)
-            self.cb_autostart = QCheckBox("Auto-Start Server")
-            self.cb_autostart.setChecked(self.config.get("auto_start", False))
-            self.cb_autostart.stateChanged.connect(self.save)
-            col1.addWidget(self.cb_autostart)
-            self.cb_restart = QCheckBox("Auto-Restart on Crash")
-            self.cb_restart.setChecked(self.config.get("enable_auto_restart", True))
-            self.cb_restart.stateChanged.connect(self.save)
-            col1.addWidget(self.cb_restart)
-            ram_row = QHBoxLayout()
-            ram_row.addWidget(QLabel("Server RAM:"))
-            self.entry_memory = QLineEdit()
-            self.entry_memory.setMaximumWidth(60)
-            self.entry_memory.setText(self.config.get("server_memory", "8G"))
-            self.entry_memory.textChanged.connect(self.on_config_change)
-            ram_row.addWidget(self.entry_memory)
-            self.lbl_reboot = QLabel("⚠ Reboot Required")
-            self.lbl_reboot.setStyleSheet("color: #ff9800;")
-            self.lbl_reboot.hide()
-            ram_row.addWidget(self.lbl_reboot)
-            ram_row.addStretch()
-            col1.addLayout(ram_row)
-            aot_row = QHBoxLayout()
-            aot_row.addWidget(QLabel("AOT:"))
-            self.entry_aot = QLineEdit()
-            self.entry_aot.setMaximumWidth(120)
-            self.entry_aot.setText(self.config.get("server_aot", ""))
-            self.entry_aot.textChanged.connect(self.on_config_change)
-            aot_row.addWidget(self.entry_aot)
-            btn_aot = QPushButton("Browse")
-            btn_aot.setMaximumWidth(70)
-            btn_aot.clicked.connect(self.browse_aot)
-            aot_row.addWidget(btn_aot)
-            col1.addLayout(aot_row)
-            controls_layout.addLayout(col1)
-
-            col2 = QVBoxLayout()
-            col2.setSpacing(6)
-            self.cb_check_upd = QCheckBox("Check for new server updates")
-            self.cb_check_upd.setChecked(self.config.get("check_updates", True))
-            self.cb_check_upd.stateChanged.connect(lambda: self._on_check_updates_toggled())
-            col2.addWidget(self.cb_check_upd)
-            self.cb_no_update_modded = QCheckBox("Do not update if modded")
-            self.cb_no_update_modded.setChecked(not self.config.get("check_updates", True))
-            self.cb_no_update_modded.stateChanged.connect(lambda: self._on_no_update_modded_toggled())
-            col2.addWidget(self.cb_no_update_modded)
-            bkp_row = QHBoxLayout()
-            self.cb_backup = QCheckBox("Backup World on Start")
-            self.cb_backup.setChecked(self.config.get("enable_backups", True))
-            self.cb_backup.stateChanged.connect(self.save)
-            bkp_row.addWidget(self.cb_backup)
-            bkp_row.addWidget(QLabel("Max:"))
-            self.entry_max_backups = QLineEdit()
-            self.entry_max_backups.setMaximumWidth(30)
-            self.entry_max_backups.setText(str(self.config.get("max_backups", 3)))
-            self.entry_max_backups.editingFinished.connect(self.save)
-            bkp_row.addWidget(self.entry_max_backups)
-            bkp_row.addStretch()
-            col2.addLayout(bkp_row)
-            sch_row = QHBoxLayout()
-            self.cb_schedule = QCheckBox("Schedule Restart (Hrs)")
-            self.cb_schedule.setChecked(self.config.get("enable_schedule", False))
-            self.cb_schedule.stateChanged.connect(self.save)
-            sch_row.addWidget(self.cb_schedule)
-            self.entry_schedule = QLineEdit()
-            self.entry_schedule.setMaximumWidth(45)
-            self.entry_schedule.setText(str(self.config.get("restart_interval", 12)))
-            self.entry_schedule.editingFinished.connect(self.save)
-            sch_row.addWidget(self.entry_schedule)
-            sch_row.addStretch()
-            col2.addLayout(sch_row)
-            controls_layout.addLayout(col2)
-
-            dsc_box = QFrame()
-            dsc_box.setFrameShape(QFrame.StyledPanel)
-            dsc_layout = QVBoxLayout(dsc_box)
-            dsc_layout.setContentsMargins(4, 4, 4, 4)
-            dsc_layout.setSpacing(1)
-            self.cb_discord = QCheckBox("Discord Integration")
-            self.cb_discord.setChecked(self.config.get("enable_discord", False))
-            self.cb_discord.stateChanged.connect(self.save)
-            dsc_layout.addWidget(self.cb_discord)
-            dsc_row1 = QHBoxLayout()
-            dsc_row1.addWidget(QLabel("Webhook:"))
-            self.entry_webhook = QLineEdit()
-            self.entry_webhook.setPlaceholderText("URL")
-            self.entry_webhook.setText(self.config.get("discord_webhook", ""))
-            self.entry_webhook.editingFinished.connect(self.save)
-            self.entry_webhook.setMinimumWidth(140)
-            dsc_row1.addWidget(self.entry_webhook)
-            dsc_layout.addLayout(dsc_row1)
-            dsc_row2 = QHBoxLayout()
-            dsc_row2.addWidget(QLabel("Token:"))
-            self.entry_token = QLineEdit()
-            self.entry_token.setEchoMode(QLineEdit.Password)
-            self.entry_token.setText(self.config.get("discord_token", ""))
-            self.entry_token.setMinimumWidth(140)
-            self.entry_token.editingFinished.connect(self.save)
-            dsc_row2.addWidget(self.entry_token)
-            dsc_layout.addLayout(dsc_row2)
-            dsc_row3 = QHBoxLayout()
-            dsc_row3.addWidget(QLabel("Channel:"))
-            self.entry_channel = QLineEdit()
-            self.entry_channel.setPlaceholderText("ID")
-            self.entry_channel.setText(str(self.config.get("discord_channel_id", 0)))
-            self.entry_channel.setMinimumWidth(80)
-            self.entry_channel.editingFinished.connect(self.save)
-            dsc_row3.addWidget(self.entry_channel)
-            dsc_layout.addLayout(dsc_row3)
-            controls_layout.addWidget(dsc_box)
+            def add_section_title(layout, text):
+                lbl = QLabel(text)
+                lbl.setObjectName("mutedLbl")
+                lbl.setStyleSheet("font-weight: bold;")
+                layout.addWidget(lbl)
 
             def open_dir(path):
                 try:
@@ -1697,6 +1591,140 @@ def run_gui_mode():
                     QDesktopServices.openUrl(QUrl.fromLocalFile(p))
                 except Exception as e:
                     QMessageBox.critical(self, "Error", f"Could not open directory: {e}")
+
+            top_row = QHBoxLayout()
+            top_row.setSpacing(8)
+
+            config_box = QGroupBox("Config")
+            config_box.setObjectName("controlsGroup")
+            config_layout = QHBoxLayout(config_box)
+            config_layout.setContentsMargins(6, 8, 6, 6)
+            config_layout.setSpacing(6)
+
+            config_col1 = QVBoxLayout()
+            config_col1.setSpacing(3)
+            config_col2 = QVBoxLayout()
+            config_col2.setSpacing(3)
+
+            add_section_title(config_col1, "General")
+            self.cb_logging = QCheckBox("Enable File Logging")
+            self.cb_logging.setChecked(self.config.get("enable_logging", True))
+            self.cb_logging.stateChanged.connect(self.save)
+            config_col1.addWidget(self.cb_logging)
+            self.cb_autostart = QCheckBox("Auto-Start Server")
+            self.cb_autostart.setChecked(self.config.get("auto_start", False))
+            self.cb_autostart.stateChanged.connect(self.save)
+            config_col1.addWidget(self.cb_autostart)
+            self.cb_restart = QCheckBox("Auto-Restart on Crash")
+            self.cb_restart.setChecked(self.config.get("enable_auto_restart", True))
+            self.cb_restart.stateChanged.connect(self.save)
+            config_col1.addWidget(self.cb_restart)
+
+            general_grid = QGridLayout()
+            general_grid.setHorizontalSpacing(4)
+            general_grid.setVerticalSpacing(2)
+            general_grid.addWidget(QLabel("Server RAM"), 0, 0)
+            self.entry_memory = QLineEdit()
+            self.entry_memory.setMaximumWidth(60)
+            self.entry_memory.setText(self.config.get("server_memory", "8G"))
+            self.entry_memory.textChanged.connect(self.on_config_change)
+            general_grid.addWidget(self.entry_memory, 0, 1)
+            self.lbl_reboot = QLabel("Reboot Required")
+            self.lbl_reboot.setObjectName("mutedLbl")
+            self.lbl_reboot.hide()
+            general_grid.addWidget(self.lbl_reboot, 0, 2)
+            general_grid.addWidget(QLabel("AOT Cache"), 1, 0)
+            self.entry_aot = QLineEdit()
+            self.entry_aot.setMaximumWidth(150)
+            self.entry_aot.setText(self.config.get("server_aot", ""))
+            self.entry_aot.textChanged.connect(self.on_config_change)
+            general_grid.addWidget(self.entry_aot, 1, 1)
+            btn_aot = QPushButton("Browse")
+            btn_aot.setMaximumWidth(70)
+            btn_aot.clicked.connect(self.browse_aot)
+            general_grid.addWidget(btn_aot, 1, 2)
+            general_grid.setColumnStretch(3, 1)
+            config_col1.addLayout(general_grid)
+
+            add_section_title(config_col1, "Updates")
+            self.cb_check_upd = QCheckBox("Check for Server Updates")
+            self.cb_check_upd.setChecked(self.config.get("check_updates", True))
+            self.cb_check_upd.stateChanged.connect(self._on_check_updates_toggled)
+            config_col1.addWidget(self.cb_check_upd)
+            self.cb_no_update_modded = QCheckBox("Do not update if modded")
+            self.cb_no_update_modded.setChecked(not self.config.get("check_updates", True))
+            self.cb_no_update_modded.stateChanged.connect(self._on_no_update_modded_toggled)
+            config_col1.addWidget(self.cb_no_update_modded)
+            self.cb_prerelease = QCheckBox("Use Pre-release Builds")
+            self.cb_prerelease.setChecked(self.config.get("update_to_prerelease", False))
+            self.cb_prerelease.stateChanged.connect(self.save)
+            config_col1.addWidget(self.cb_prerelease)
+            config_col1.addStretch()
+
+            add_section_title(config_col2, "Backup")
+            self.cb_backup = QCheckBox("Backup World on Start")
+            self.cb_backup.setChecked(self.config.get("enable_backups", True))
+            self.cb_backup.stateChanged.connect(self.save)
+            config_col2.addWidget(self.cb_backup)
+
+            backup_grid = QGridLayout()
+            backup_grid.setHorizontalSpacing(4)
+            backup_grid.setVerticalSpacing(2)
+            backup_grid.addWidget(QLabel("Max backups"), 0, 0)
+            self.entry_max_backups = QLineEdit()
+            self.entry_max_backups.setMaximumWidth(45)
+            self.entry_max_backups.setText(str(self.config.get("max_backups", 3)))
+            self.entry_max_backups.editingFinished.connect(self.save)
+            backup_grid.addWidget(self.entry_max_backups, 0, 1)
+            self.cb_schedule = QCheckBox("Scheduled Restart (hrs)")
+            self.cb_schedule.setChecked(self.config.get("enable_schedule", False))
+            self.cb_schedule.stateChanged.connect(self.save)
+            backup_grid.addWidget(self.cb_schedule, 1, 0)
+            self.entry_schedule = QLineEdit()
+            self.entry_schedule.setMaximumWidth(45)
+            self.entry_schedule.setText(str(self.config.get("restart_interval", 12)))
+            self.entry_schedule.editingFinished.connect(self.save)
+            backup_grid.addWidget(self.entry_schedule, 1, 1)
+            backup_grid.setColumnStretch(2, 1)
+            config_col2.addLayout(backup_grid)
+
+            add_section_title(config_col2, "Discord")
+            self.cb_discord = QCheckBox("Enable")
+            self.cb_discord.setChecked(self.config.get("enable_discord", False))
+            self.cb_discord.stateChanged.connect(self.save)
+            config_col2.addWidget(self.cb_discord)
+            discord_grid = QGridLayout()
+            discord_grid.setHorizontalSpacing(4)
+            discord_grid.setVerticalSpacing(2)
+            for row_idx, (lbl, attr, secure) in enumerate([
+                ("Webhook", "entry_webhook", False),
+                ("Token", "entry_token", True),
+                ("Channel", "entry_channel", False),
+            ]):
+                discord_grid.addWidget(QLabel(lbl), row_idx, 0)
+                e = QLineEdit()
+                if secure:
+                    e.setEchoMode(QLineEdit.Password)
+                setattr(self, attr, e)
+                if attr == "entry_webhook":
+                    e.setText(self.config.get("discord_webhook", ""))
+                elif attr == "entry_token":
+                    e.setText(self.config.get("discord_token", ""))
+                else:
+                    e.setText(str(self.config.get("discord_channel_id", 0)))
+                e.editingFinished.connect(self.save)
+                discord_grid.addWidget(e, row_idx, 1)
+            config_col2.addLayout(discord_grid)
+            config_col2.addStretch()
+
+            config_layout.addLayout(config_col1, 1)
+            config_layout.addLayout(config_col2, 1)
+            top_row.addWidget(config_box, 2)
+
+            server_box = QGroupBox("Server Details")
+            server_layout = QHBoxLayout(server_box)
+            server_layout.setContentsMargins(6, 8, 6, 6)
+            server_layout.setSpacing(8)
 
             nav_col = QVBoxLayout()
             nav_col.setSpacing(1)
@@ -1712,7 +1740,8 @@ def run_gui_mode():
             self.lbl_status.setTextFormat(Qt.RichText)
             self.lbl_status.setStyleSheet("font-weight: bold;")
             nav_col.addWidget(self.lbl_status)
-            controls_layout.addLayout(nav_col)
+            nav_col.addStretch()
+            server_layout.addLayout(nav_col, 1)
 
             action_col = QVBoxLayout()
             action_col.setSpacing(2)
@@ -1721,14 +1750,14 @@ def run_gui_mode():
             self.btn_start.setFixedWidth(140)
             self.btn_start.setObjectName("btnStart")
             self.btn_start.clicked.connect(self.start_server)
-            action_col.addWidget(self.btn_start)
+            action_col.addWidget(self.btn_start, 0, Qt.AlignHCenter)
             self.btn_stop = QPushButton("STOP SERVER")
             self.btn_stop.setFixedHeight(26)
             self.btn_stop.setFixedWidth(140)
             self.btn_stop.setObjectName("btnStop")
             self.btn_stop.setEnabled(False)
             self.btn_stop.clicked.connect(self.stop_server)
-            action_col.addWidget(self.btn_stop)
+            action_col.addWidget(self.btn_stop, 0, Qt.AlignHCenter)
             ver_lbl = QLabel(f"Version: {self.config.get('last_server_version', 'Unknown')}")
             ver_lbl.setObjectName("mutedLbl")
             action_col.addWidget(ver_lbl, 0, Qt.AlignHCenter)
@@ -1746,9 +1775,11 @@ def run_gui_mode():
             self.lbl_uptime = QLabel("Uptime: 00:00:00")
             self.lbl_uptime.setStyleSheet("font-size: 10px;")
             action_col.addWidget(self.lbl_uptime, 0, Qt.AlignHCenter)
-            controls_layout.addLayout(action_col)
+            action_col.addStretch()
+            server_layout.addLayout(action_col, 1)
 
-            main.addWidget(controls)
+            top_row.addWidget(server_box, 1)
+            main.addLayout(top_row)
 
             self.console = QPlainTextEdit()
             self.console.setReadOnly(True)
@@ -1792,6 +1823,11 @@ def run_gui_mode():
             if not IS_WINDOWS:
                 self.cb_start_win.setEnabled(False)
             footer.addWidget(self.cb_start_win)
+            if IS_LINUX:
+                btn_install_service = QPushButton("Install Service")
+                btn_install_service.setFixedHeight(24)
+                btn_install_service.clicked.connect(self.install_service_ui)
+                footer.addWidget(btn_install_service)
             footer.addStretch()
             footer.addWidget(btn_check)
             btn_coffee = QPushButton("☕ Support the Development")
@@ -1831,6 +1867,22 @@ def run_gui_mode():
                     self.core.log(f"[Donate] Could not open browser. Please visit: {donate_url}")
             except Exception as e:
                 self.core.log(f"[Donate] Failed to open browser ({e}). Please visit: {donate_url}")
+
+        def install_service_ui(self):
+            if not IS_LINUX:
+                return
+            if os.geteuid() != 0:
+                QMessageBox.information(
+                    self,
+                    "Install Service",
+                    "Installing a systemd service requires root.\nRun: sudo python3 hsm.pyw -install-service",
+                )
+                return
+            try:
+                install_service()
+                QMessageBox.information(self, "Install Service", "hytale-manager service installed and enabled.")
+            except Exception as e:
+                QMessageBox.critical(self, "Install Service", f"Failed to install service: {e}")
 
         def send_command_ui(self):
             cmd = self.entry_cmd.text().strip()
@@ -1877,6 +1929,7 @@ def run_gui_mode():
             self.config.update({
                 "enable_logging": self.cb_logging.isChecked(),
                 "check_updates": self.cb_check_upd.isChecked(),
+                "update_to_prerelease": self.cb_prerelease.isChecked(),
                 "auto_start": self.cb_autostart.isChecked(),
                 "enable_backups": self.cb_backup.isChecked(),
                 "enable_discord": self.cb_discord.isChecked(),
@@ -2067,6 +2120,7 @@ def run_gui_mode():
             qss = f"""
                 QMainWindow, QWidget {{ background: {bg}; }}
                 #footerBar, #cmdBar, #controlsGroup {{ background: {footer_bg}; }}
+                #footerBar QCheckBox {{ background: transparent; }}
                 #footerBar QPushButton {{ font-size: 10px; padding: 2px 6px; min-height: 20px; }}
                 QCheckBox {{ color: {fg}; padding: 2px; background-color: transparent; }}
                 QCheckBox:hover {{ color: {fg}; }}
@@ -2158,6 +2212,7 @@ def print_help():
     print("  - enable_logging      : Write logs to hsm.log. [true/false]")
     print("  - check_updates       : Check for updates on startup. [true/false]")
     print("  - auto_start          : Automatically start the server when this script runs. [true/false]")
+    print("  - update_to_prerelease: Track pre-release server channel. [true/false]")
     print("  - enable_backups      : Zip the world folder before starting. [true/false]")
     print("  - max_backups         : Number of backups to keep. [Integer]")
     print("  - enable_discord      : Enable Discord Webhook notifications. [true/false]")
