@@ -60,7 +60,7 @@ if platform.system() == "Windows":
     # Also optionally use STARTUPINFO to hide things deeper if needed.
 else:
     CREATE_NO_WINDOW = 0
-__version__ = "3.11.3"
+__version__ = "3.11.4"
 JAVA_VERSION_REQ = 25
 SERVER_JAR = "HytaleServer.jar"
 UPDATER_ZIP_URL = "https://downloader.hytale.com/hytale-downloader.zip"
@@ -98,13 +98,43 @@ except ImportError:
 
 
 # --- Locking & Dependencies ---
+def _pid_exists(pid):
+    """Fallback PID existence check when psutil is not available."""
+    if HAS_PSUTIL:
+        try:
+            return psutil.pid_exists(pid)
+        except Exception:
+            pass
+    if platform.system() == "Windows":
+        try:
+            startupinfo = None
+            if hasattr(subprocess, 'STARTUPINFO'):
+                startupinfo = subprocess.STARTUPINFO()
+                startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+            out = subprocess.check_output(
+                ["tasklist", "/FI", f"PID eq {pid}"],
+                creationflags=0x08000000,
+                startupinfo=startupinfo,
+                stderr=subprocess.DEVNULL
+            )
+            return str(pid).encode() in out
+        except Exception:
+            return False
+    else:
+        import errno
+        try:
+            os.kill(pid, 0)
+            return True
+        except OSError as err:
+            return err.errno != errno.ESRCH
+
 def _acquire_single_instance_lock():
     """Returns (True, None) if we got the lock, else (False, error_msg)."""
     try:
         if os.path.exists(LOCK_FILE):
             with open(LOCK_FILE, "r") as f:
                 old_pid = int(f.read().strip())
-            if HAS_PSUTIL and psutil.pid_exists(old_pid):
+            if _pid_exists(old_pid):
                 return False, f"Another instance is already running (PID {old_pid}). Close it first."
             try:
                 os.remove(LOCK_FILE)
@@ -405,14 +435,14 @@ class HytaleUpdaterCore:
         self.discord_bot = HytaleBot(self)
 
         @self.discord_bot.command(name="status")
-        async def status(ctx):
+        async def status_cmd(ctx):
             if self.server_process:
                 await ctx.send(f"✅ Server is **Running** (PID: {self.server_process.pid})")
             else:
                 await ctx.send("🔴 Server is **Stopped**")
 
         @self.discord_bot.command(name="start")
-        async def start_server(ctx):
+        async def start_cmd(ctx):
             if self.server_process:
                 await ctx.send("Server is already running.")
             else:
@@ -420,7 +450,7 @@ class HytaleUpdaterCore:
                 self.start_server_sequence()
 
         @self.discord_bot.command(name="stop")
-        async def stop_server(ctx):
+        async def stop_cmd(ctx):
             if self.server_process:
                 await ctx.send("🛑 Stopping server...")
                 self.stop_server()
@@ -428,7 +458,7 @@ class HytaleUpdaterCore:
                 await ctx.send("Server is already stopped.")
         
         @self.discord_bot.command(name="restart")
-        async def restart_server(ctx):
+        async def restart_cmd(ctx):
             await ctx.send("🔄 Restarting server...")
             self.stop_server()
             # specific restart logic for the bot
@@ -728,7 +758,7 @@ class HytaleUpdaterCore:
 
             CREDENTIALS_FILE = ".hytale-downloader-credentials.json"
             exe_dir = os.path.dirname(os.path.abspath(updater_cmd[0]))
-            cred_path = os.path.join(exe_dir, CREDENTIALS_FILE)
+            cred_path = os.path.join(BASE_DIR, CREDENTIALS_FILE)
             cmd.extend(["-credentials-path", cred_path])
 
             try:
@@ -1066,7 +1096,7 @@ except Exception as e:
                  # Target the credentials file explicitly where the executable is located
                 CREDENTIALS_FILE = ".hytale-downloader-credentials.json"
                 exe_dir = os.path.dirname(os.path.abspath(resolved_cmd[0]))
-                cred_path = os.path.join(exe_dir, CREDENTIALS_FILE)
+                cred_path = os.path.join(BASE_DIR, CREDENTIALS_FILE)
                 
                 run_cmd = resolved_cmd.copy()
                 run_cmd.extend(self._updater_channel_args())
@@ -1643,6 +1673,11 @@ def run_gui_mode():
             self.log_timer = QTimer(self)
             self.log_timer.timeout.connect(self.drain_log_queue)
             self.log_timer.start(80)
+            if HAS_PSUTIL:
+                try:
+                    psutil.cpu_percent(interval=None)
+                except Exception:
+                    pass
             self.uptime_timer = QTimer(self)
             self.uptime_timer.timeout.connect(self._refresh_uptime)
             self.uptime_timer.start(1000)
@@ -2125,10 +2160,10 @@ def run_gui_mode():
             uptime_text = f"Uptime: {s}"
             if self.lbl_uptime.text() != uptime_text:
                 self.lbl_uptime.setText(uptime_text)
-            # Update CPU/RAM (interval=0.1 required - cpu_percent returns 0 with interval=None)
+            # Update CPU/RAM (interval=None is non-blocking after being seeded in init)
             if HAS_PSUTIL:
                 try:
-                    cpu_load = psutil.cpu_percent(interval=0.1)
+                    cpu_load = psutil.cpu_percent(interval=None)
                     ram_load = psutil.virtual_memory().percent
                     self.lbl_cpu.setText(f"CPU: {cpu_load}%")
                     self.lbl_ram.setText(f"RAM: {ram_load}%")

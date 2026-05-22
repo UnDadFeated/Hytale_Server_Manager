@@ -1,5 +1,28 @@
 # Changelog
 
+## 3.11.4 (2026-05-22)
+
+- **fix:** GUI: Seed CPU metrics and use non-blocking `psutil.cpu_percent(interval=None)` to eliminate periodic 100ms stutter.
+- **fix:** Discord Bot: Rename shadowed local coroutine commands (`status_cmd`, `start_cmd`, `stop_cmd`, `restart_cmd`) so the core server controls can be correctly called from Discord.
+- **fix:** Updater: Force credentials file path to resolve to `BASE_DIR` instead of executable directory to prevent crashes on read-only system filesystems (e.g. `/usr/bin/java`).
+- **fix:** Locking: Implement robust platform-specific fallback process check (using `tasklist` on Windows, `os.kill(pid, 0)` on Unix) to support single-instance detection when `psutil` is not yet installed.
+
+## 3.11.3 (2026-04-20)
+
+- **fix:** Prompts: Improve missing GUI dependency prompts with OS-specific install commands.
+- **fix:** Compatibility: Add platform-specific Java 25 requirement check and dialog alerts.
+- **feat:** Downloader: Switch pre-release downloader arg to `-patchline pre-release` per Hytale manual specs.
+
+## 3.11.1 (2026-04-20)
+
+- **feat:** Auto-start: Update cross-platform autostart behavior and checkbox integration for Windows registry, Linux desktop, and macOS login items.
+
+## 3.11.0 (2026-04-20)
+
+- **feat:** Layout: Clean up GUI config area with column-based layout (General, Updates, Backup, Discord).
+- **feat:** Linux: Add Install Service systemd setup button in footer.
+- **feat:** Downloader: Add `update_to_prerelease` option to track pre-release channel.
+
 ## 3.10.22 (2025-03-21)
 
 - **fix:** CPU/RAM: #statsContainer explicit footer_bg (overrides QWidget black)
