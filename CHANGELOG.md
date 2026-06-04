@@ -1,5 +1,12 @@
 # Changelog
 
+## 3.12.0 (2026-06-04)
+
+- **feat:** Auto-start: Implement native macOS LaunchAgent autostart support via a user plist file. Adds `-disable-autostart` option.
+- **feat:** Requirements: Add recommended/optional `discord.py` comment to requirements.txt.
+- **feat:** GUI: Add Find in Console log search and highlight utility (previous/next jumping, yellow selection).
+- **feat:** GUI: Add a new Backup Manager dialog to list, delete, and safely restore world backups.
+
 ## 3.11.4 (2026-05-22)
 
 - **fix:** GUI: Seed CPU metrics and use non-blocking `psutil.cpu_percent(interval=None)` to eliminate periodic 100ms stutter.

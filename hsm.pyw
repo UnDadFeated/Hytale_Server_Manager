@@ -60,7 +60,7 @@ if platform.system() == "Windows":
     # Also optionally use STARTUPINFO to hide things deeper if needed.
 else:
     CREATE_NO_WINDOW = 0
-__version__ = "3.11.4"
+__version__ = "3.12.0"
 JAVA_VERSION_REQ = 25
 SERVER_JAR = "HytaleServer.jar"
 UPDATER_ZIP_URL = "https://downloader.hytale.com/hytale-downloader.zip"
@@ -1551,7 +1551,37 @@ def enable_autostart():
         print("Auto-start setup via CLI is Windows-only in GUI. Use the GUI 'Start with Windows' option.")
         return
     if IS_DARWIN:
-        print("macOS CLI autostart is not supported. Add the app to System Preferences > Users & Groups > Login Items.")
+        plist_dir = os.path.expanduser("~/Library/LaunchAgents")
+        plist_path = os.path.join(plist_dir, "com.hytale.manager.plist")
+        try:
+            if not os.path.exists(plist_dir):
+                os.makedirs(plist_dir)
+            script_path = os.path.abspath(__file__)
+            working_dir = os.path.dirname(script_path)
+            content = f"""<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.hytale.manager</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>{sys.executable}</string>
+        <string>{script_path}</string>
+        <string>-nogui</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>WorkingDirectory</key>
+    <string>{working_dir}</string>
+</dict>
+</plist>
+"""
+            with open(plist_path, "w", encoding="utf-8") as f:
+                f.write(content)
+            print(f"macOS LaunchAgent autostart entry created at {plist_path}")
+        except Exception as e:
+            print(f"Failed to enable macOS LaunchAgent autostart: {e}")
         return
 
     autostart_dir = os.path.expanduser("~/.config/autostart")
@@ -1575,6 +1605,41 @@ Terminal=false
         print(f"Auto-start entry created at {desktop_file}")
     except Exception as e:
         print(f"Failed to enable auto-start: {e}")
+
+def disable_autostart():
+    """Disables auto-start for the current user (Windows, Linux, macOS)."""
+    if IS_WINDOWS:
+        try:
+            import winreg
+            key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Run", 0, winreg.KEY_SET_VALUE)
+            try:
+                winreg.DeleteValue(key, "HytaleServerManager")
+                print("Registry auto-start entry removed.")
+            except OSError:
+                print("Registry auto-start entry not found.")
+            winreg.CloseKey(key)
+        except Exception as e:
+            print(f"Failed to remove registry key: {e}")
+    elif IS_LINUX:
+        desktop_file = os.path.expanduser("~/.config/autostart/hytale-manager.desktop")
+        try:
+            if os.path.exists(desktop_file):
+                os.remove(desktop_file)
+                print("Linux autostart entry removed.")
+            else:
+                print("Linux autostart entry not found.")
+        except Exception as e:
+            print(f"Failed to remove Linux auto-start entry: {e}")
+    elif IS_DARWIN:
+        plist_path = os.path.expanduser("~/Library/LaunchAgents/com.hytale.manager.plist")
+        try:
+            if os.path.exists(plist_path):
+                os.remove(plist_path)
+                print("macOS LaunchAgent autostart entry removed.")
+            else:
+                print("macOS LaunchAgent autostart entry not found.")
+        except Exception as e:
+            print(f"Failed to remove macOS LaunchAgent: {e}")
 
 # --- Modes ---
 def run_console_mode():
@@ -1623,13 +1688,14 @@ def run_gui_mode():
         QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
         QGridLayout, QGroupBox, QLabel, QPushButton, QCheckBox, QLineEdit,
         QTextEdit, QPlainTextEdit, QFrame, QMessageBox, QFileDialog,
+        QDialog, QListWidget, QListWidgetItem,
     )
     _debug("GUI", "PySide6.QtWidgets OK")
     _debug("GUI", "importing PySide6.QtCore...")
     from PySide6.QtCore import Qt, QTimer, QUrl
     _debug("GUI", "PySide6.QtCore OK")
     _debug("GUI", "importing PySide6.QtGui...")
-    from PySide6.QtGui import QPalette, QColor, QFont, QTextCursor, QTextCharFormat, QImage, QPainter, QPen, QBrush
+    from PySide6.QtGui import QPalette, QColor, QFont, QTextCursor, QTextCharFormat, QImage, QPainter, QPen, QBrush, QTextDocument
     _debug("GUI", "PySide6.QtGui OK")
 
     def ensure_check_icons():
@@ -1647,6 +1713,110 @@ def run_gui_mode():
             p.drawLine(5, 10, 12, 2)
             p.end()
             img.save(path)
+
+    class BackupManagerDialog(QDialog):
+        def __init__(self, parent=None):
+            super().__init__(parent)
+            self.setWindowTitle("Manage Backups")
+            self.setMinimumSize(500, 400)
+            self.parent_gui = parent
+            
+            if parent:
+                self.setStyleSheet(parent.styleSheet())
+                
+            layout = QVBoxLayout(self)
+            
+            self.list_widget = QListWidget()
+            layout.addWidget(self.list_widget)
+            
+            btn_layout = QHBoxLayout()
+            self.btn_restore = QPushButton("Restore")
+            self.btn_delete = QPushButton("Delete")
+            self.btn_close = QPushButton("Close")
+            
+            btn_layout.addWidget(self.btn_restore)
+            btn_layout.addWidget(self.btn_delete)
+            btn_layout.addStretch()
+            btn_layout.addWidget(self.btn_close)
+            layout.addLayout(btn_layout)
+            
+            self.btn_restore.clicked.connect(self.restore_backup)
+            self.btn_delete.clicked.connect(self.delete_backup)
+            self.btn_close.clicked.connect(self.accept)
+            
+            self.refresh_list()
+            
+        def refresh_list(self):
+            self.list_widget.clear()
+            if not os.path.exists(BACKUP_DIR):
+                return
+            backups = sorted([f for f in os.listdir(BACKUP_DIR) if f.startswith("world_backup_") and f.endswith(".zip")], reverse=True)
+            for b in backups:
+                path = os.path.join(BACKUP_DIR, b)
+                sz_mb = os.path.getsize(path) / (1024 * 1024)
+                self.list_widget.addItem(f"{b} ({sz_mb:.2f} MB)")
+                
+        def get_selected_backup(self):
+            item = self.list_widget.currentItem()
+            if not item:
+                return None
+            # Extract filename from text
+            text = item.text()
+            filename = text.split(" (")[0]
+            return filename
+            
+        def restore_backup(self):
+            filename = self.get_selected_backup()
+            if not filename:
+                QMessageBox.warning(self, "Warning", "Please select a backup to restore.")
+                return
+                
+            if self.parent_gui and self.parent_gui.core.server_process and self.parent_gui.core.server_process.poll() is None:
+                QMessageBox.critical(self, "Error", "Cannot restore backup while the server is running. Please stop the server first.")
+                return
+                
+            reply = QMessageBox.question(
+                self, "Restore Backup",
+                f"Are you sure you want to restore '{filename}'?\nThis will overwrite the current world directory.",
+                QMessageBox.Yes | QMessageBox.No, QMessageBox.No
+            )
+            if reply != QMessageBox.Yes:
+                return
+                
+            backup_path = os.path.join(BACKUP_DIR, filename)
+            try:
+                # Remove current world dir
+                if os.path.exists(WORLD_DIR):
+                    shutil.rmtree(WORLD_DIR)
+                # Extract backup to WORLD_DIR
+                os.makedirs(WORLD_DIR, exist_ok=True)
+                with zipfile.ZipFile(backup_path, 'r') as zip_ref:
+                    zip_ref.extractall(WORLD_DIR)
+                QMessageBox.information(self, "Success", "Backup restored successfully.")
+            except Exception as e:
+                QMessageBox.critical(self, "Error", f"Failed to restore backup: {e}")
+                
+        def delete_backup(self):
+            filename = self.get_selected_backup()
+            if not filename:
+                QMessageBox.warning(self, "Warning", "Please select a backup to delete.")
+                return
+                
+            reply = QMessageBox.question(
+                self, "Delete Backup",
+                f"Are you sure you want to permanently delete '{filename}'?",
+                QMessageBox.Yes | QMessageBox.No, QMessageBox.No
+            )
+            if reply != QMessageBox.Yes:
+                return
+                
+            backup_path = os.path.join(BACKUP_DIR, filename)
+            try:
+                os.remove(backup_path)
+                self.refresh_list()
+                QMessageBox.information(self, "Success", "Backup deleted.")
+            except Exception as e:
+                QMessageBox.critical(self, "Error", f"Failed to delete backup: {e}")
 
     class HytaleGUI(QMainWindow):
         """Graphical User Interface for the Hytale Server Manager using PySide6."""
@@ -1858,6 +2028,12 @@ def run_gui_mode():
                 b.setFixedHeight(22)
                 b.clicked.connect(lambda checked, p=path: open_dir(p))
                 nav_col.addWidget(b)
+                if lbl == "Backups":
+                    btn_manage_backups = QPushButton("Manage")
+                    btn_manage_backups.setFixedWidth(70)
+                    btn_manage_backups.setFixedHeight(22)
+                    btn_manage_backups.clicked.connect(self.show_backup_manager)
+                    nav_col.addWidget(btn_manage_backups)
             nav_col.addSpacing(4)
             self.lbl_status = QLabel("Status: <span style='color:#e53935'>Stopped</span>")
             self.lbl_status.setObjectName("statusLbl")
@@ -1912,6 +2088,26 @@ def run_gui_mode():
             self.console.setMinimumHeight(300)
             main.addWidget(self.console, 1)
 
+            # Search bar
+            search_frame = QFrame()
+            search_frame.setObjectName("searchBar")
+            search_layout = QHBoxLayout(search_frame)
+            search_layout.setContentsMargins(4, 2, 4, 2)
+            search_layout.addWidget(QLabel("Find in Console:"))
+            self.entry_search = QLineEdit()
+            self.entry_search.setPlaceholderText("Type to search console logs...")
+            self.entry_search.textChanged.connect(self.search_console)
+            search_layout.addWidget(self.entry_search)
+            btn_prev = QPushButton("Previous")
+            btn_prev.setFixedHeight(22)
+            btn_prev.clicked.connect(self.search_prev)
+            btn_next = QPushButton("Next")
+            btn_next.setFixedHeight(22)
+            btn_next.clicked.connect(self.search_next)
+            search_layout.addWidget(btn_prev)
+            search_layout.addWidget(btn_next)
+            main.addWidget(search_frame)
+
             cmd_frame = QFrame()
             cmd_frame.setObjectName("cmdBar")
             cmd_layout = QHBoxLayout(cmd_frame)
@@ -1958,6 +2154,43 @@ def run_gui_mode():
             btn_coffee.clicked.connect(self.open_donation_link)
             footer.addWidget(btn_coffee)
             main.addWidget(footer_frame)
+
+        def show_backup_manager(self):
+            dialog = BackupManagerDialog(self)
+            dialog.exec()
+
+        def search_console(self):
+            query = self.entry_search.text()
+            if not query:
+                self.console.setExtraSelections([])
+                return
+            
+            extra_selections = []
+            doc = self.console.document()
+            cursor = doc.find(query)
+            
+            fmt = QTextCharFormat()
+            fmt.setBackground(QColor("yellow"))
+            fmt.setForeground(QColor("black"))
+            
+            while not cursor.isNull():
+                selection = QTextEdit.ExtraSelection()
+                selection.format = fmt
+                selection.cursor = cursor
+                extra_selections.append(selection)
+                cursor = doc.find(query, cursor)
+                
+            self.console.setExtraSelections(extra_selections)
+
+        def search_next(self):
+            query = self.entry_search.text()
+            if query:
+                self.console.find(query)
+
+        def search_prev(self):
+            query = self.entry_search.text()
+            if query:
+                self.console.find(query, QTextDocument.FindBackward)
 
         def browse_aot(self):
             path, _ = QFileDialog.getOpenFileName(self, "Select AOT File", "", "AOT Files (*.aot);;All Files (*)")
@@ -2288,7 +2521,7 @@ def run_gui_mode():
             self.setPalette(p)
             qss = f"""
                 QMainWindow, QWidget {{ background: {bg}; }}
-                #footerBar, #cmdBar, #controlsGroup {{ background: {footer_bg}; }}
+                #footerBar, #cmdBar, #searchBar, #controlsGroup {{ background: {footer_bg}; }}
                 #footerBar QCheckBox {{ background: transparent; }}
                 #footerBar QPushButton {{ font-size: 10px; padding: 2px 6px; min-height: 20px; }}
                 QCheckBox {{ color: {fg}; padding: 2px; background-color: transparent; }}
@@ -2367,7 +2600,8 @@ def print_help():
     print("\nCommand Line Options:")
     print("  -nogui             : Run in console-only mode (headless). Useful for servers.")
     print("  -install-service   : (Linux) Installs systemd service for background operation.")
-    print("  -enable-autostart  : (Linux) Adds to desktop auto-start.")
+    print("  -enable-autostart  : (Linux/macOS) Adds to user autostart (desktop shortcut/LaunchAgent).")
+    print("  -disable-autostart : Removes from user autostart.")
     print("  -help, --help      : Show this help message.")
     print("\nDescription:")
     print("  Manages the Hytale Dedicated Server life-cycle.")
@@ -2433,6 +2667,11 @@ def main():
     if "-enable-autostart" in sys.argv:
         _debug("MAIN", "enable-autostart")
         enable_autostart()
+        sys.exit(0)
+
+    if "-disable-autostart" in sys.argv:
+        _debug("MAIN", "disable-autostart")
+        disable_autostart()
         sys.exit(0)
 
     ok, err = _acquire_single_instance_lock()

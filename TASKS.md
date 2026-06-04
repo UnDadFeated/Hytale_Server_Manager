@@ -6,6 +6,13 @@
 
 ## Completed by Version
 
+### 3.12.0 (2026-06-04)
+
+- [x] macOS: Add LaunchAgent support for CLI autostart
+- [x] Requirements: Add optional discord.py note
+- [x] GUI: Add Find in Console log search and highlight utility
+- [x] GUI: Add a new Backup Manager dialog (list, restore, delete)
+
 ### 3.10.22 (2025-03-21)
 
 - [x] CPU/RAM: statsContainer explicit footer_bg (fix black bg)
@@ -167,4 +174,4 @@
 
 ## Backlog
 
-- Optional: Add macOS LaunchAgent support for CLI autostart
+- (none)
