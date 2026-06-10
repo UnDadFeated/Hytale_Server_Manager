@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.12.1 (2026-06-10)
+
+- **fix:** Windows: Ensure script runs with `.pyw` extension under `pythonw.exe`. Automatically renames and restarts from `.py` on launch.
+- **fix:** Self-Updater: Add smart handling of `.py` on Windows to download the update targeting `.pyw`, clean up the legacy `.py` file, and restart under `pythonw.exe`.
+
 ## 3.12.0 (2026-06-04)
 
 - **feat:** Auto-start: Implement native macOS LaunchAgent autostart support via a user plist file. Adds `-disable-autostart` option.

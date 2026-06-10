@@ -60,7 +60,7 @@ if platform.system() == "Windows":
     # Also optionally use STARTUPINFO to hide things deeper if needed.
 else:
     CREATE_NO_WINDOW = 0
-__version__ = "3.12.0"
+__version__ = "3.12.1"
 JAVA_VERSION_REQ = 25
 SERVER_JAR = "HytaleServer.jar"
 UPDATER_ZIP_URL = "https://downloader.hytale.com/hytale-downloader.zip"
@@ -832,10 +832,13 @@ class HytaleUpdaterCore:
             if parse_ver(remote_version) > parse_ver(local_version):
                 self.log(f"New manager version found ({remote_version}). Downloading...")
                 
-                # Use current file extension
-                script_ext = os.path.splitext(sys.argv[0])[1]
-                if script_ext not in [".py", ".pyw"]:
-                     script_ext = ".py" # fallback
+                # On Windows, always target .pyw for clean non-terminal updates.
+                if sys.platform == "win32":
+                    script_ext = ".pyw"
+                else:
+                    script_ext = os.path.splitext(sys.argv[0])[1]
+                    if script_ext not in [".py", ".pyw"]:
+                         script_ext = ".py" # fallback
                      
                 new_file = f"hsm{script_ext}.new"
                 
@@ -860,7 +863,15 @@ class HytaleUpdaterCore:
         The installer waits for this process to exit, replaces the script files,
         and then restarts the manager.
         """
-        args_repr = repr(sys.argv)
+        args = sys.argv.copy()
+        if IS_WINDOWS:
+            # Force the script filename in argv to be hsm.pyw
+            for i, arg in enumerate(args):
+                if arg.endswith("hsm.py"):
+                    args[i] = arg + "w"
+                elif "hsm.py" in arg:
+                    args[i] = arg.replace("hsm.py", "hsm.pyw")
+        args_repr = repr(args)
         installer_code = f'''
 import os
 import time
@@ -902,27 +913,44 @@ try:
         except Exception as e:
             print(f"Failed to remove version.py: {{e}}")
 
-    script_ext = os.path.splitext({repr(sys.argv[0])})[1]
-    if script_ext not in [".py", ".pyw"]:
-        script_ext = ".py"
-        
-    old_file = f"hsm{{script_ext}}"
-    new_file = f"hsm{{script_ext}}.new"
+    if os.name == 'nt':
+        old_file = "hsm.pyw"
+        new_file = "hsm.pyw.new"
+        # Remove legacy hsm.py if it exists on Windows
+        if os.path.exists("hsm.py"):
+            try:
+                os.remove("hsm.py")
+                print("Removed legacy hsm.py")
+            except Exception as e:
+                print(f"Failed to remove hsm.py: {{e}}")
+    else:
+        script_ext = os.path.splitext({repr(sys.argv[0])})[1]
+        if script_ext not in [".py", ".pyw"]:
+            script_ext = ".py"
+        old_file = f"hsm{{script_ext}}"
+        new_file = f"hsm{{script_ext}}.new"
 
     if os.path.exists(new_file):
-        if os.path.exists(old_file): os.remove(old_file)
-        os.rename(new_file, old_file)
+        if os.path.exists(old_file):
+            try: os.remove(old_file)
+            except Exception: pass
+        try: os.rename(new_file, old_file)
+        except Exception: pass
         print(f"Updated {{old_file}}")
         
     print("Files updated. Restarting manager...")
     
-    # We want the manager to restart in pythonw if it's currently running in pythonw
-    # However python is needed for the GUI to do the printing.
-    # if it's currently running from a bat or standard executable we just use sys.executable
-    if "pythonw" in sys.executable.lower():
-         subprocess.Popen([sys.executable] + {args_repr}, creationflags={CREATE_NO_WINDOW})
+    # We want the manager to restart in pythonw if it's Windows or if it's currently running in pythonw
+    if os.name == 'nt':
+        pythonw_exe = sys.executable.lower().replace("python.exe", "pythonw.exe")
+        if "pythonw" not in pythonw_exe:
+            pythonw_exe = "pythonw.exe"
+        subprocess.Popen([pythonw_exe] + {args_repr}, creationflags=0x08000000)
     else:
-         subprocess.Popen([sys.executable] + {args_repr})
+        if "pythonw" in sys.executable.lower():
+             subprocess.Popen([sys.executable] + {args_repr}, creationflags={CREATE_NO_WINDOW})
+        else:
+             subprocess.Popen([sys.executable] + {args_repr})
     
 except Exception as e:
     print(f"Update failed: {{e}}")
@@ -2723,6 +2751,39 @@ def main():
                 sys.exit(1)
 
 if __name__ == "__main__":
+    # Ensure the manager runs as a .pyw on Windows to prevent a persistent command window.
+    if sys.platform == "win32":
+        try:
+            script_path = os.path.abspath(__file__)
+        except NameError:
+            script_path = os.path.abspath(sys.argv[0])
+            
+        if script_path.lower().endswith(".py"):
+            target_path = script_path + "w"  # Convert .py to .pyw
+            try:
+                # If target .pyw already exists, try to remove it first to avoid rename collisions
+                if os.path.exists(target_path):
+                    try:
+                        os.remove(target_path)
+                    except Exception:
+                        pass
+                
+                # Rename the script on disk
+                os.rename(script_path, target_path)
+                
+                # Resolve pythonw executable path
+                pythonw_exe = sys.executable.lower().replace("python.exe", "pythonw.exe")
+                if "pythonw" not in pythonw_exe:
+                    pythonw_exe = "pythonw.exe"
+                
+                # Restart the renamed script using pythonw
+                import subprocess
+                subprocess.Popen([pythonw_exe, target_path] + sys.argv[1:])
+                sys.exit(0)
+            except Exception as e:
+                # If the rename or relaunch fails, we log it and proceed normally
+                _debug("START", f"Failed to enforce .pyw execution: {e}")
+
     try:
         _debug("MAIN", "__main__ block entered, calling main()")
         main()
