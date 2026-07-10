@@ -6,6 +6,10 @@
 
 ## Completed by Version
 
+### 3.12.2 (2026-07-09)
+
+- [x] Locking: Prevent stale PID lock file conflicts by implementing process cmdline/directory verification.
+
 ### 3.12.1 (2026-06-10)
 
 - [x] Windows: Add check to ensure script runs with `.pyw` extension under `pythonw.exe`. Automatically renames and restarts from `.py` on launch.

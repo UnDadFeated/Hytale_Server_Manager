@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.12.2 (2026-07-09)
+
+- **fix:** Locking: Prevent PID reuse conflicts by writing the script's absolute path to the lock file and validating process cmdline/directory via `psutil`. Gracefully handles legacy lock files.
+
 ## 3.12.1 (2026-06-10)
 
 - **fix:** Windows: Ensure script runs with `.pyw` extension under `pythonw.exe`. Automatically renames and restarts from `.py` on launch.

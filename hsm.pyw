@@ -60,7 +60,7 @@ if platform.system() == "Windows":
     # Also optionally use STARTUPINFO to hide things deeper if needed.
 else:
     CREATE_NO_WINDOW = 0
-__version__ = "3.12.1"
+__version__ = "3.12.2"
 JAVA_VERSION_REQ = 25
 SERVER_JAR = "HytaleServer.jar"
 UPDATER_ZIP_URL = "https://downloader.hytale.com/hytale-downloader.zip"
@@ -98,50 +98,76 @@ except ImportError:
 
 
 # --- Locking & Dependencies ---
-def _pid_exists(pid):
-    """Fallback PID existence check when psutil is not available."""
-    if HAS_PSUTIL:
-        try:
-            return psutil.pid_exists(pid)
-        except Exception:
-            pass
-    if platform.system() == "Windows":
-        try:
-            startupinfo = None
-            if hasattr(subprocess, 'STARTUPINFO'):
-                startupinfo = subprocess.STARTUPINFO()
-                startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-            out = subprocess.check_output(
-                ["tasklist", "/FI", f"PID eq {pid}"],
-                creationflags=0x08000000,
-                startupinfo=startupinfo,
-                stderr=subprocess.DEVNULL
-            )
-            return str(pid).encode() in out
-        except Exception:
-            return False
-    else:
-        import errno
-        try:
-            os.kill(pid, 0)
-            return True
-        except OSError as err:
-            return err.errno != errno.ESRCH
-
 def _acquire_single_instance_lock():
     """Returns (True, None) if we got the lock, else (False, error_msg)."""
     try:
+        current_script = os.path.abspath(__file__)
         if os.path.exists(LOCK_FILE):
-            with open(LOCK_FILE, "r") as f:
-                old_pid = int(f.read().strip())
-            if _pid_exists(old_pid):
-                return False, f"Another instance is already running (PID {old_pid}). Close it first."
+            try:
+                with open(LOCK_FILE, "r", encoding="utf-8") as f:
+                    lines = f.read().splitlines()
+            except Exception:
+                lines = []
+
+            if lines:
+                try:
+                    old_pid = int(lines[0].strip())
+                except ValueError:
+                    old_pid = None
+
+                old_path = lines[1].strip() if len(lines) > 1 else None
+
+                if old_pid is not None:
+                    is_running = False
+                    if HAS_PSUTIL and psutil.pid_exists(old_pid):
+                        try:
+                            proc = psutil.Process(old_pid)
+                            cmd = proc.cmdline()
+                            cwd = proc.cwd()
+                            script_basename = os.path.basename(current_script).lower()
+
+                            # Check if the process matches our script path/name
+                            matched = False
+                            for arg in cmd:
+                                if arg.lower().endswith(('.py', '.pyw')):
+                                    try:
+                                        abs_arg = os.path.abspath(os.path.join(cwd, arg))
+                                        if os.path.normcase(abs_arg) == os.path.normcase(current_script):
+                                            matched = True
+                                            break
+                                    except Exception:
+                                        pass
+                                    if os.path.basename(arg).lower() == script_basename and os.path.normcase(cwd) == os.path.normcase(BASE_DIR):
+                                        matched = True
+                                        break
+
+                            if matched:
+                                is_running = True
+                            elif old_path and os.path.normcase(old_path) == os.path.normcase(current_script):
+                                # If the lock file points to our script path, but the running PID
+                                # command line does not match our script, the PID has been reused.
+                                is_running = False
+                            else:
+                                # Fallback if we cannot match the command line but the path doesn't tell us otherwise
+                                is_running = False
+                        except (psutil.NoSuchProcess, psutil.ZombieProcess):
+                            is_running = False
+                        except psutil.AccessDenied:
+                            # An AccessDenied process is likely owned by another user or system,
+                            # so it is not our script running in this directory.
+                            is_running = False
+
+                    if is_running:
+                        return False, f"Another instance is already running (PID {old_pid}). Close it first."
+
             try:
                 os.remove(LOCK_FILE)
             except OSError:
                 pass
-        with open(LOCK_FILE, "w") as f:
-            f.write(str(os.getpid()))
+
+        with open(LOCK_FILE, "w", encoding="utf-8") as f:
+            f.write(f"{os.getpid()}\n{current_script}")
+
         def _release():
             try:
                 if os.path.exists(LOCK_FILE):
