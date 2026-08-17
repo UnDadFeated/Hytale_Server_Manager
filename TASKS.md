@@ -6,6 +6,16 @@
 
 ## Completed by Version
 
+### 3.14.0 (2026-08-17)
+
+- [x] Core: "Do not update if modded" now works — detects `.jar`/`.zip` files in `mods/` and skips updates (manual and background checks).
+- [x] GUI: Remove fake mutual exclusivity between "Check for Server Updates" and "Do not update if modded".
+- [x] GUI: Hide Discord input fields when Discord is disabled.
+- [x] GUI: Platform-appropriate monospace console font (Consolas/Menlo/DejaVu Sans Mono).
+- [x] Perf: GUI — RAM/AOT fields save on commit instead of every keystroke.
+- [x] Chore: Remove unused `install_service_ui` GUI method.
+- [x] Docs: Document `modded_do_not_update` in README config reference and CLI help.
+
 ### 3.13.0 (2026-08-17)
 
 - [x] Console: Interactive command input from stdin (parity with GUI command bar).

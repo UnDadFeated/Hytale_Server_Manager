@@ -1,5 +1,15 @@
 # Changelog
 
+## 3.14.0 (2026-08-17)
+
+- **feat:** Mod-aware updates: "Do not update if modded" now works — the manager detects mod files (`.jar`/`.zip`) inside `mods/` and skips server updates when the option is enabled (default on). Previously the checkbox silently did nothing.
+- **fix:** GUI: Removed the fake mutual exclusivity between "Check for Server Updates" and "Do not update if modded"; both can be enabled simultaneously.
+- **fix:** GUI: Discord input fields (webhook/token/channel) are now hidden when Discord is disabled.
+- **fix:** GUI: The console now uses a platform-appropriate monospace font (Consolas on Windows, Menlo on macOS, DejaVu Sans Mono on Linux) instead of hardcoded Consolas.
+- **perf:** GUI: The Server RAM and AOT Cache fields now save on commit (Enter/blur) instead of on every keystroke.
+- **chore:** Removed the unused `install_service_ui` GUI method (systemd install remains available via `-install-service`).
+- **docs:** Documented `modded_do_not_update` in the README config reference and CLI help.
+
 ## 3.13.0 (2026-08-17)
 
 - **feat:** Console mode: interactive command input — each stdin line is forwarded to the server console (parity with the GUI command bar). Degrades to idle under no-tty/systemd (stdin EOF).

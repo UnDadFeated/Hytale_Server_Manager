@@ -60,7 +60,7 @@ if platform.system() == "Windows":
     # Also optionally use STARTUPINFO to hide things deeper if needed.
 else:
     CREATE_NO_WINDOW = 0
-__version__ = "3.13.0"
+__version__ = "3.14.0"
 JAVA_VERSION_REQ = 25
 SERVER_JAR = "HytaleServer.jar"
 UPDATER_ZIP_URL = "https://downloader.hytale.com/hytale-downloader.zip"
@@ -70,10 +70,12 @@ IS_DARWIN = platform.system() == "Darwin"
 IS_LINUX = platform.system() == "Linux"
 IS_PYTHONW = IS_WINDOWS and "pythonw" in sys.executable.lower()
 UPDATER_EXECUTABLE = "hytale-downloader.exe" if IS_WINDOWS else "hytale-downloader"
+CONSOLE_FONT_FAMILY = "Consolas" if IS_WINDOWS else "Menlo" if IS_DARWIN else "DejaVu Sans Mono"
 ASSETS_FILE = "Assets.zip"
 AOT_FILE = "HytaleServer.aot"
 BACKUP_DIR = "universe/backups"
 WORLD_DIR = "universe/worlds"
+MODS_DIR = "mods"
 
 # Always resolve paths relative to the script's own directory.
 # This ensures the manager works correctly when launched by Windows at startup
@@ -351,6 +353,7 @@ def load_config():
         "dark_mode": True,
         "enable_logging": True,
         "check_updates": True,
+        "modded_do_not_update": True,
         "update_to_prerelease": False,
         "auto_start": False,
         "enable_backups": True,
@@ -1105,8 +1108,26 @@ except Exception as e:
         
         return True
 
+    def has_mods(self):
+        """Returns True if mod files (.jar/.zip) are present in the server's mods/ folder."""
+        mods_path = os.path.join(BASE_DIR, MODS_DIR)
+        if not os.path.isdir(mods_path):
+            return False
+        try:
+            return any(f.lower().endswith((".jar", ".zip")) for f in os.listdir(mods_path))
+        except OSError:
+            return False
+
+    def _modded_update_blocked(self):
+        """True when 'Do not update if modded' is active and mods are present."""
+        return self.config.get("modded_do_not_update", True) and self.has_mods()
+
     def update_server(self):
         """Handles the server update process using the Hytale downloader."""
+        if self._modded_update_blocked():
+            self.log("Mods detected and 'Do not update if modded' is active. Skipping server update.")
+            return False
+
         updater_cmd = self.ensure_updater()
         
         if not updater_cmd:
@@ -1486,6 +1507,10 @@ except Exception as e:
 
             updater_cmd = self.ensure_updater()
             if not updater_cmd: return
+
+            if self._modded_update_blocked():
+                self.log("[Background Check] 'Do not update if modded' active with mods present. Skipping server update check.")
+                return
 
             resolved_cmd = self.resolve_command_path(updater_cmd)
             remote_version = self.get_remote_server_version(resolved_cmd)
@@ -2012,7 +2037,7 @@ def run_gui_mode():
             self.entry_memory = QLineEdit()
             self.entry_memory.setMaximumWidth(60)
             self.entry_memory.setText(self.config.get("server_memory", "8G"))
-            self.entry_memory.textChanged.connect(self.on_config_change)
+            self.entry_memory.editingFinished.connect(self.on_config_change)
             general_grid.addWidget(self.entry_memory, 0, 1)
             self.lbl_reboot = QLabel("Reboot Required")
             self.lbl_reboot.setObjectName("mutedLbl")
@@ -2022,7 +2047,7 @@ def run_gui_mode():
             self.entry_aot = QLineEdit()
             self.entry_aot.setMaximumWidth(150)
             self.entry_aot.setText(self.config.get("server_aot", ""))
-            self.entry_aot.textChanged.connect(self.on_config_change)
+            self.entry_aot.editingFinished.connect(self.on_config_change)
             general_grid.addWidget(self.entry_aot, 1, 1)
             btn_aot = QPushButton("Browse")
             btn_aot.setMaximumWidth(70)
@@ -2034,11 +2059,11 @@ def run_gui_mode():
             add_section_title(config_col1, "Updates")
             self.cb_check_upd = QCheckBox("Check for Server Updates")
             self.cb_check_upd.setChecked(self.config.get("check_updates", True))
-            self.cb_check_upd.stateChanged.connect(self._on_check_updates_toggled)
+            self.cb_check_upd.stateChanged.connect(self.save)
             config_col1.addWidget(self.cb_check_upd)
             self.cb_no_update_modded = QCheckBox("Do not update if modded")
-            self.cb_no_update_modded.setChecked(not self.config.get("check_updates", True))
-            self.cb_no_update_modded.stateChanged.connect(self._on_no_update_modded_toggled)
+            self.cb_no_update_modded.setChecked(self.config.get("modded_do_not_update", True))
+            self.cb_no_update_modded.stateChanged.connect(self.save)
             config_col1.addWidget(self.cb_no_update_modded)
             self.cb_prerelease = QCheckBox("Use Pre-release Builds")
             self.cb_prerelease.setChecked(self.config.get("update_to_prerelease", False))
@@ -2078,6 +2103,11 @@ def run_gui_mode():
             self.cb_discord.setChecked(self.config.get("enable_discord", False))
             self.cb_discord.stateChanged.connect(self.save)
             config_col2.addWidget(self.cb_discord)
+            discord_box = QFrame()
+            discord_box.setFrameShape(QFrame.NoFrame)
+            discord_frame_layout = QVBoxLayout(discord_box)
+            discord_frame_layout.setContentsMargins(0, 0, 0, 0)
+            discord_frame_layout.setSpacing(2)
             discord_grid = QGridLayout()
             discord_grid.setHorizontalSpacing(4)
             discord_grid.setVerticalSpacing(2)
@@ -2099,7 +2129,10 @@ def run_gui_mode():
                     e.setText(str(self.config.get("discord_channel_id", 0)))
                 e.editingFinished.connect(self.save)
                 discord_grid.addWidget(e, row_idx, 1)
-            config_col2.addLayout(discord_grid)
+            discord_frame_layout.addLayout(discord_grid)
+            config_col2.addWidget(discord_box)
+            discord_box.setVisible(self.cb_discord.isChecked())
+            self.cb_discord.toggled.connect(discord_box.setVisible)
             config_col2.addStretch()
 
             config_layout.addLayout(config_col1, 1)
@@ -2174,7 +2207,7 @@ def run_gui_mode():
 
             self.console = QPlainTextEdit()
             self.console.setReadOnly(True)
-            self.console.setFont(QFont("Consolas", 8))
+            self.console.setFont(QFont(CONSOLE_FONT_FAMILY, 8))
             self.console.setMaximumBlockCount(1000)
             self.console.setMinimumHeight(300)
             main.addWidget(self.console, 1)
@@ -2315,22 +2348,6 @@ def run_gui_mode():
             except Exception as e:
                 self.core.log(f"[Donate] Failed to open browser ({e}). Please visit: {donate_url}")
 
-        def install_service_ui(self):
-            if not IS_LINUX:
-                return
-            if os.geteuid() != 0:
-                QMessageBox.information(
-                    self,
-                    "Install Service",
-                    "Installing a systemd service requires root.\nRun: sudo python3 hsm.pyw -install-service",
-                )
-                return
-            try:
-                install_service()
-                QMessageBox.information(self, "Install Service", "hytale-manager service installed and enabled.")
-            except Exception as e:
-                QMessageBox.critical(self, "Install Service", f"Failed to install service: {e}")
-
         def send_command_ui(self):
             cmd = self.entry_cmd.text().strip()
             if cmd:
@@ -2356,26 +2373,13 @@ def run_gui_mode():
             self.core.stop_server()
             self.btn_stop.setEnabled(False)
 
-        def _on_check_updates_toggled(self):
-            """Mutually exclusive: exactly one of Check for updates / Do not update if modded."""
-            self.cb_no_update_modded.blockSignals(True)
-            self.cb_no_update_modded.setChecked(not self.cb_check_upd.isChecked())
-            self.cb_no_update_modded.blockSignals(False)
-            self.save()
-
-        def _on_no_update_modded_toggled(self):
-            """Mutually exclusive: exactly one of Check for updates / Do not update if modded."""
-            self.cb_check_upd.blockSignals(True)
-            self.cb_check_upd.setChecked(not self.cb_no_update_modded.isChecked())
-            self.cb_check_upd.blockSignals(False)
-            self.save()
-
         def save(self):
             ch = self.entry_channel.text().strip()
             mb = self.entry_max_backups.text().strip()
             self.config.update({
                 "enable_logging": self.cb_logging.isChecked(),
                 "check_updates": self.cb_check_upd.isChecked(),
+                "modded_do_not_update": self.cb_no_update_modded.isChecked(),
                 "update_to_prerelease": self.cb_prerelease.isChecked(),
                 "auto_start": self.cb_autostart.isChecked(),
                 "enable_backups": self.cb_backup.isChecked(),
@@ -2642,7 +2646,7 @@ def run_gui_mode():
                 #btnStop:disabled {{ color: #666; }}
             """
             self.setStyleSheet(qss)
-            self.console.setStyleSheet(f"QPlainTextEdit {{ background: {console_bg}; color: {console_fg}; font-family: Consolas; font-size: 11px; }}")
+            self.console.setStyleSheet(f"QPlainTextEdit {{ background: {console_bg}; color: {console_fg}; font-family: {CONSOLE_FONT_FAMILY}; font-size: 11px; }}")
             self._refresh_uptime()  # Re-apply status color after theme change
 
         def toggle_theme(self):
@@ -2705,6 +2709,7 @@ def print_help():
     print("  - dark_mode           : (GUI) Enable dark theme. [true/false]")
     print("  - enable_logging      : Write logs to hsm.log. [true/false]")
     print("  - check_updates       : Check for updates on startup. [true/false]")
+    print("  - modded_do_not_update: Skip server updates when mods are present. [true/false]")
     print("  - auto_start          : Automatically start the server when this script runs. [true/false]")
     print("  - update_to_prerelease: Track pre-release patchline. [true/false]")
     print("  - enable_backups      : Zip the world folder before starting. [true/false]")

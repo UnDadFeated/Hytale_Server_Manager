@@ -6,7 +6,7 @@
   </p>
 
   <p>
-    <img alt="Version" src="https://img.shields.io/badge/version-3.13.0-blue.svg" />
+ <img alt="Version" src="https://img.shields.io/badge/version-3.14.0-blue.svg" />
     <img alt="Python" src="https://img.shields.io/badge/python-3.8%2B-blue.svg" />
     <img alt="Platform" src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey.svg" />
   </p>
@@ -14,7 +14,7 @@
 
 ![Hytale Server Manager Screenshot](screenshot.png)
 
-*Screenshot: Hytale Server Manager v3.13.0 — Controls, live metrics (CPU/RAM/uptime), and console output.*
+*Screenshot: Hytale Server Manager v3.14.0 - Controls, live metrics (CPU/RAM/uptime), and console output.*
 
 ---
 
@@ -24,6 +24,7 @@
 * 📊 **Live Dashboard Metrics:** The GUI provides a live readout of current system CPU and RAM utilization.
 * 🧪 **Pre-release Support:** Optionally track and install pre-release server builds via the `-patchline pre-release` flag.
 * 🔄 **Automated Updates:** Seamlessly checks the project's Git master branch via HTTP. When an update is detected, it automatically downloads and executes a safe installer script, minimizing downtime.
+* 🧩 **Mod-Aware Updates:** With "Do not update if modded" enabled (default on), the manager detects mod files (`.jar`/`.zip`) in `mods/` and skips automatic server updates to protect modpack integrity.
 * 🛡️ **Crash Detection & Auto-Restart:** Continually monitors the server process and issues automatic restarts to maintain high uptime.
 * ⏱️ **Scheduled Restarts:** Set specific intervals for automated, clean server reboots to prevent memory saturation and degradation over time.
 * 💾 **Automated World Backups:** Archives the local server world directory into a `.zip` file prior to initialization. Prevents catastrophic data loss.
@@ -126,6 +127,7 @@ Changes made to the server logic are primarily driven by the `hsm.conf` JSON fla
   "manager_auto_update": true,
   "start_with_windows": false,
   "check_updates": true,
+  "modded_do_not_update": true,
   "auto_start": false,
   "server_memory": "8G",
   "enable_backups": true,
@@ -147,6 +149,6 @@ Changes made to the server logic are primarily driven by the `hsm.conf` JSON fla
 
 ## 🏷️ Versioning
 
-**Current Version:** `3.13.0`
+**Current Version:** `3.14.0`
 
 See [CHANGELOG.md](CHANGELOG.md) for full version history.
