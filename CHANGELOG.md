@@ -8,7 +8,7 @@
 - **fix:** GUI: The console now uses a platform-appropriate monospace font (Consolas on Windows, Menlo on macOS, DejaVu Sans Mono on Linux) instead of hardcoded Consolas.
 - **perf:** GUI: The Server RAM and AOT Cache fields now save on commit (Enter/blur) instead of on every keystroke.
 - **chore:** Removed the unused `install_service_ui` GUI method (systemd install remains available via `-install-service`).
-- **docs:** Documented `modded_do_not_update` in the README config reference and CLI help.
+- **docs:** Documented `modded_do_not_update` and `update_to_prerelease` in the README config reference and CLI help; corrected the pre-release bullet (`-patchline` is passed to the Hytale updater, not a manager flag) and the stale "macOS autostart not supported" note (`-enable-autostart` installs a LaunchAgent).
 
 ## 3.13.0 (2026-08-17)
 

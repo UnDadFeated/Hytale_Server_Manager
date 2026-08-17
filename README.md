@@ -22,7 +22,7 @@
 
 * 🖥️ **Dual Interfaces:** Launch via the modern, user-friendly graphical interface (GUI), or utilize the headless console mode (`-nogui`) for streamlined server environments — console mode accepts typed server commands directly from stdin.
 * 📊 **Live Dashboard Metrics:** The GUI provides a live readout of current system CPU and RAM utilization.
-* 🧪 **Pre-release Support:** Optionally track and install pre-release server builds via the `-patchline pre-release` flag.
+* 🧪 **Pre-release Support:** Optionally track and install pre-release server builds by enabling `update_to_prerelease` in `hsm.conf` (the manager then passes `-patchline pre-release` to the Hytale updater).
 * 🔄 **Automated Updates:** Seamlessly checks the project's Git master branch via HTTP. When an update is detected, it automatically downloads and executes a safe installer script, minimizing downtime.
 * 🧩 **Mod-Aware Updates:** With "Do not update if modded" enabled (default on), the manager detects mod files (`.jar`/`.zip`) in `mods/` and skips automatic server updates to protect modpack integrity.
 * 🛡️ **Crash Detection & Auto-Restart:** Continually monitors the server process and issues automatic restarts to maintain high uptime.
@@ -114,7 +114,7 @@ python3 hsm.pyw -enable-autostart
 
 **Windows:** Use the GUI "Start with Windows" checkbox to add to registry autostart.
 
-**macOS:** CLI autostart is not supported. Add to **System Preferences → Users & Groups → Login Items** manually.
+**macOS:** `python3 hsm.pyw -enable-autostart` installs a LaunchAgent (`com.hytale.manager`) that starts the manager headless at login; remove it with `-disable-autostart`.
 
 ---
 
@@ -128,6 +128,7 @@ Changes made to the server logic are primarily driven by the `hsm.conf` JSON fla
   "start_with_windows": false,
   "check_updates": true,
   "modded_do_not_update": true,
+  "update_to_prerelease": false,
   "auto_start": false,
   "server_memory": "8G",
   "enable_backups": true,
