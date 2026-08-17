@@ -1,6 +1,15 @@
 # Changelog
 
-## 3.12.2 (2026-07-09)
+## 3.13.0 (2026-08-17)
+
+- **feat:** Console mode: interactive command input — each stdin line is forwarded to the server console (parity with the GUI command bar). Degrades to idle under no-tty/systemd (stdin EOF).
+- **feat:** AOT cache: auto-detect bundled `HytaleServer.aot` and pass `-XX:AOTCache` automatically; a missing custom `server_aot` path now falls back to the bundled cache with a warning.
+- **feat:** Graceful shutdown: console mode handles `SIGTERM` (systemd `stop`) like `SIGINT` — sends `stop`, waits, escalates SIGTERM → SIGKILL on Unix before exiting.
+- **fix:** Server launch: removed redundant `_JAVA_OPTIONS` env var (duplicated `-Xmx`, polluted stderr, and leaked into child JVMs); heap is passed on the command line only.
+- **fix:** Server stop: Unix stop now escalates `stop` command → 15s → SIGTERM → 15s → SIGKILL instead of jumping straight to SIGKILL after 30s.
+- **perf:** Console mode logging reuses a single persistent `hsm.log` handle instead of open/write/close per log line.
+- **docs:** README version badge/caption/config reference corrected; documented console command input, `server_aot`, and graceful shutdown.
+
 
 - **fix:** Locking: Prevent PID reuse conflicts by writing the script's absolute path to the lock file and validating process cmdline/directory via `psutil`. Gracefully handles legacy lock files.
 

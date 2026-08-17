@@ -6,6 +6,15 @@
 
 ## Completed by Version
 
+### 3.13.0 (2026-08-17)
+
+- [x] Console: Interactive command input from stdin (parity with GUI command bar).
+- [x] AOT: Auto-detect bundled `HytaleServer.aot`; custom path fallback on missing file.
+- [x] Shutdown: Handle SIGTERM (systemd) with graceful stop; SIGTERM→SIGKILL escalation on Unix.
+- [x] Launch: Remove redundant `_JAVA_OPTIONS` env var.
+- [x] Perf: Persistent log handle in console mode.
+- [x] Docs: README version/config/console-mode updates.
+
 ### 3.12.2 (2026-07-09)
 
 - [x] Locking: Prevent stale PID lock file conflicts by implementing process cmdline/directory verification.

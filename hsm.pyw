@@ -60,7 +60,7 @@ if platform.system() == "Windows":
     # Also optionally use STARTUPINFO to hide things deeper if needed.
 else:
     CREATE_NO_WINDOW = 0
-__version__ = "3.12.2"
+__version__ = "3.13.0"
 JAVA_VERSION_REQ = 25
 SERVER_JAR = "HytaleServer.jar"
 UPDATER_ZIP_URL = "https://downloader.hytale.com/hytale-downloader.zip"
@@ -1348,17 +1348,19 @@ except Exception as e:
             self.send_discord_webhook("🟢 Hytale Server Starting...")
 
             memory = self.config.get("server_memory", "4G")
-            
-            env = os.environ.copy()
-            env["_JAVA_OPTIONS"] = f"-Xmx{memory}"
-            
+
             cmd = ["java", f"-Xmx{memory}"]
-            
-            custom_aot = self.config.get("server_aot", "")
-            if custom_aot and os.path.exists(custom_aot):
-                 self.log(f"Using Custom AOT Cache: {custom_aot}")
-                 cmd.append(f"-XX:AOTCache={custom_aot}")
-                 
+
+            aot = self.config.get("server_aot", "")
+            if aot and not os.path.exists(aot):
+                self.log(f"WARNING: Configured AOT cache not found: {aot}. Using bundled default.")
+                aot = ""
+            if not aot and os.path.exists(AOT_FILE):
+                aot = AOT_FILE
+            if aot:
+                self.log(f"Using AOT cache: {aot}")
+                cmd.append(f"-XX:AOTCache={aot}")
+
             cmd.extend(["-jar", SERVER_JAR, "--assets", assets_path])
 
             try:
@@ -1371,7 +1373,7 @@ except Exception as e:
                     creationflags = CREATE_NO_WINDOW
                 
                 self.server_process = subprocess.Popen(
-                    cmd, env=env,
+                    cmd,
                     stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE,
                     startupinfo=startupinfo, creationflags=creationflags
                 )
@@ -1531,12 +1533,21 @@ except Exception as e:
             except Exception:
                 pass
             try:
-                self.server_process.wait(timeout=30)
+                self.server_process.wait(timeout=15)
             except subprocess.TimeoutExpired:
-                _debug("SERVER", "stop timeout (30s) - killing process")
-                self.log("Server did not stop in time. Killing process...")
-                self.server_process.kill()
-                self.server_process.wait()
+                if not IS_WINDOWS:
+                    _debug("SERVER", "stop timeout (15s) - sending SIGTERM")
+                    self.log("Server did not stop in time. Sending SIGTERM...")
+                    try:
+                        self.server_process.terminate()
+                        self.server_process.wait(timeout=15)
+                    except (subprocess.TimeoutExpired, OSError):
+                        pass
+                if self.server_process.poll() is None:
+                    _debug("SERVER", "stop timeout - killing process (SIGKILL)")
+                    self.log("Server did not stop in time. Killing process...")
+                    self.server_process.kill()
+                    self.server_process.wait()
     
     def _schedule_restart(self):
         """Schedules an automatic restart after a configured interval."""
@@ -1698,40 +1709,66 @@ def disable_autostart():
 # --- Modes ---
 def run_console_mode():
     """Runs the updater in console-only mode."""
+    log_handle = None
+
     def console_logger(message, tag=None):
         """
         Callback for logging messages in console mode.
-        
+
         Args:
             message (str): The log message.
             tag (str, optional): The log tag (e.g., 'stderr').
         """
-        # File logging and fallback print (when run with python, not pythonw).
+        nonlocal log_handle
         timestamp = datetime.datetime.now().strftime("[%Y-%m-%d %H:%M:%S]")
-        
-        # Only print if rich console is NOT active to avoid double printing
         if not console:
              print(f"{timestamp} {message}")
-        
         try:
-            with open(LOG_FILE, "a", encoding="utf-8") as f:
-                f.write(f"{timestamp} {message}\n")
+            if log_handle is None:
+                log_handle = open(LOG_FILE, "a", encoding="utf-8")
+            log_handle.write(f"{timestamp} {message}\n")
+            log_handle.flush()
         except OSError:
-            pass
-    
+            log_handle = None
+
     config = load_config()
     core = HytaleUpdaterCore(console_logger, input_callback=input, config=config)
-    
+
     print("--- Console Mode ---")
-    print("Use Ctrl+C to stop. The script will try to gracefully stop the server.")
-    
+    print("Type a line to send it to the server console. Ctrl+C stops the manager and server.")
+
+    def _command_reader():
+        """Reads operator commands from stdin and forwards them to the server."""
+        try:
+            for line in sys.stdin:
+                cmd = line.strip()
+                if cmd:
+                    core.send_command(cmd)
+        except (EOFError, OSError):
+            pass
+
+    # Under systemd/no-tty, stdin is EOF (/dev/null) so this thread exits immediately.
+    if sys.stdin is not None and not sys.stdin.closed:
+        threading.Thread(target=_command_reader, daemon=True).start()
+
     core.start_server_sequence()
-    
+    # systemd sends SIGTERM on 'systemctl stop'; translate it to a graceful shutdown.
+    def _sigterm_handler(signum, frame):
+        raise KeyboardInterrupt
+
+    signal.signal(signal.SIGTERM, _sigterm_handler)
+
     try:
         while True:
             time.sleep(1)
     except KeyboardInterrupt:
         core.stop_server()
+    finally:
+        if log_handle is not None:
+            try:
+                log_handle.close()
+            except OSError:
+                pass
 
 # --- GUI ---
 def run_gui_mode():
@@ -2652,7 +2689,7 @@ def print_help():
     print("=" * 60)
     print("Usage: python hsm.pyw [options]")
     print("\nCommand Line Options:")
-    print("  -nogui             : Run in console-only mode (headless). Useful for servers.")
+    print("  -nogui             : Run in console-only mode (headless). Type lines to send server commands.")
     print("  -install-service   : (Linux) Installs systemd service for background operation.")
     print("  -enable-autostart  : (Linux/macOS) Adds to user autostart (desktop shortcut/LaunchAgent).")
     print("  -disable-autostart : Removes from user autostart.")
@@ -2678,6 +2715,7 @@ def print_help():
     print("  - enable_schedule     : Enable scheduled periodic restarts. [true/false]")
     print("  - restart_interval    : Hours between scheduled restarts. [Float]")
     print("  - server_memory       : Java Heap Size (e.g., '4G', '8G'). [String]")
+    print("  - server_aot          : Custom AOT cache path. Empty auto-detects HytaleServer.aot. [String]")
     print("=" * 60)
     sys.exit(0)
 

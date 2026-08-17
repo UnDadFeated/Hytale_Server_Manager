@@ -6,7 +6,7 @@
   </p>
 
   <p>
-    <img alt="Version" src="https://img.shields.io/badge/version-3.12.1-blue.svg" />
+    <img alt="Version" src="https://img.shields.io/badge/version-3.13.0-blue.svg" />
     <img alt="Python" src="https://img.shields.io/badge/python-3.8%2B-blue.svg" />
     <img alt="Platform" src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey.svg" />
   </p>
@@ -14,20 +14,20 @@
 
 ![Hytale Server Manager Screenshot](screenshot.png)
 
-*Screenshot: Hytale Server Manager v3.12.1 — Controls, live metrics (CPU/RAM/uptime), and console output.*
+*Screenshot: Hytale Server Manager v3.13.0 — Controls, live metrics (CPU/RAM/uptime), and console output.*
 
 ---
 
 ## ✨ Key Features
 
-* 🖥️ **Dual Interfaces:** Launch via the modern, user-friendly graphical interface (GUI), or utilize the headless console mode (`-nogui`) for streamlined server environments.
+* 🖥️ **Dual Interfaces:** Launch via the modern, user-friendly graphical interface (GUI), or utilize the headless console mode (`-nogui`) for streamlined server environments — console mode accepts typed server commands directly from stdin.
 * 📊 **Live Dashboard Metrics:** The GUI provides a live readout of current system CPU and RAM utilization.
 * 🧪 **Pre-release Support:** Optionally track and install pre-release server builds via the `-patchline pre-release` flag.
 * 🔄 **Automated Updates:** Seamlessly checks the project's Git master branch via HTTP. When an update is detected, it automatically downloads and executes a safe installer script, minimizing downtime.
 * 🛡️ **Crash Detection & Auto-Restart:** Continually monitors the server process and issues automatic restarts to maintain high uptime.
 * ⏱️ **Scheduled Restarts:** Set specific intervals for automated, clean server reboots to prevent memory saturation and degradation over time.
 * 💾 **Automated World Backups:** Archives the local server world directory into a `.zip` file prior to initialization. Prevents catastrophic data loss.
-* 🚀 **Performance Optimization:** Automatically detects and enables the Java Ahead-Of-Time (`HytaleServer.aot`) cache, leading to dramatically faster startup times.
+* 🚀 **Performance Optimization:** Automatically detects and enables the bundled Java Ahead-Of-Time (`HytaleServer.aot`) cache for faster startup times, or point `server_aot` at a custom cache.
 * 🖥️ **Start with Windows:** On Windows, conveniently set the manager to launch automatically on system boot (with a 30s delay).
 * 💬 **Discord Integration:** Features integrated Discord Webhooks to instantly alert your community on server status changes (Startup, Shutdown, Crashes). Includes a basic threaded bot for chat commands.
 * 📡 **Background Polling:** In GUI mode, periodically scans for new official Hytale server versions every 30 minutes, downloading and replacing engine files as necessary.
@@ -95,6 +95,9 @@ Targeting headless environments, the application can bypass the PySide6 GUI depe
 python3 hsm.pyw -nogui
 ```
 
+* **Interactive Commands:** In a terminal, each line you type is forwarded to the server console (e.g. `list players`, `/update status`). Under systemd or other no-tty setups stdin is EOF and the loop simply idles.
+* **Graceful Shutdown:** `SIGINT` (Ctrl+C) and `SIGTERM` (e.g. `systemctl stop hytale-manager`) both stop the Java server cleanly (`stop` command → SIGTERM → SIGKILL escalation) before the manager exits.
+
 ### Platform-Specific Utilities
 
 **Linux & Arch Linux (systemd):**
@@ -130,6 +133,7 @@ Changes made to the server logic are primarily driven by the `hsm.conf` JSON fla
   "enable_auto_restart": true,
   "enable_schedule": false,
   "restart_interval": 12.0,
+  "server_aot": "",
   "enable_discord": false,
   "discord_webhook": "YOUR_WEBHOOK_URL",
   "discord_token": "YOUR_BOT_TOKEN",
@@ -143,6 +147,6 @@ Changes made to the server logic are primarily driven by the `hsm.conf` JSON fla
 
 ## 🏷️ Versioning
 
-**Current Version:** `3.12.1`
+**Current Version:** `3.13.0`
 
 See [CHANGELOG.md](CHANGELOG.md) for full version history.
